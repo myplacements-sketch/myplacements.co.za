@@ -1,0 +1,2939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>myplacements | Find Au Pairs, Domestic Workers, Gardeners &amp; Drivers in South Africa</title>
+  <meta name="description" content="South Africa's trusted domestic placement marketplace since 2013."/>
+  <meta name="robots" content="index, follow"/>
+  <meta name="geo.region" content="ZA"/>
+  <link rel="canonical" href="https://www.myplacements.co.za/"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="https://www.myplacements.co.za/"/>
+  <meta property="og:title" content="myplacements | South Africa's Domestic Placement Marketplace"/>
+  <meta property="og:description" content="Find verified au pairs, domestic workers, gardeners and drivers."/>
+  <meta property="og:locale" content="en_ZA"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:#F5F0E8;}
+    .seo-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);}
+    #mp-loading{position:fixed;top:0;left:0;right:0;bottom:0;background:#0F2137;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;}
+    #mp-loading h1{color:#3ECFB2;font-size:28px;font-family:Georgia,serif;font-weight:700;}
+    #mp-loading p{color:rgba(255,255,255,0.6);font-size:14px;}
+    .mp-spin{width:40px;height:40px;border:3px solid rgba(62,207,178,0.2);
+      border-top-color:#3ECFB2;border-radius:50%;animation:spin 0.8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+<div class="seo-only" aria-hidden="true">
+  <h1>myplacements — South Africa's Domestic Placement Marketplace Since 2013</h1>
+  <nav aria-label="Main navigation">
+    <a href="/">Home</a>
+    <a href="/#browse">Browse Profiles</a>
+    <a href="/#register">Register as Domestic Worker</a>
+    <a href="/#employers">For Employers</a>
+  </nav>
+</div>
+<div id="mp-loading">
+  <h1>myplacements</h1>
+  <div class="mp-spin"></div>
+  <p>Loading...</p>
+</div>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useRef } = React;
+
+
+var C = {
+  navy:"#0F2137", navyMid:"#1A3A5C", blue:"#2E6DA4",
+  mint:"#3ECFB2", mintLight:"#D4F5EF", sand:"#F5F0E8",
+  gold:"#C9A84C", goldLight:"#FDF3DC",
+  white:"#FFFFFF", gray50:"#F7F8FA", gray100:"#EDEEF2",
+  gray300:"#BFC4CE", gray500:"#737A8C", gray700:"#3D4352",
+  red:"#E63946", redLight:"#FDECEA", green:"#1A9E6C",
+  greenLight:"#E6F7F2", amber:"#D97706", amberLight:"#FEF3C7",
+  purple:"#7C3AED", purpleLight:"#EDE9FE",
+};
+
+var PAYFAST = {
+  merchantId:  "36418833",
+  merchantKey: "awk17jlup4oxt",
+  sandbox:     true,   // set to false when going live
+  sandboxUrl:  "https://sandbox.payfast.co.za/eng/process",
+  liveUrl:     "https://www.payfast.co.za/eng/process",
+  returnUrl:   "https://www.myplacements.co.za/#payment-success",
+  cancelUrl:   "https://www.myplacements.co.za/#payment-cancel",
+  notifyUrl:   "https://www.myplacements.co.za/api/payfast-notify",
+};
+function pfUrl() { return PAYFAST.sandbox ? PAYFAST.sandboxUrl : PAYFAST.liveUrl; }
+
+var CATEGORIES = ["All","Au Pair","Domestic Worker","Gardener","Driver"];
+var EXP_RANGES = ["Any","0-2 yrs","3-5 yrs","6-10 yrs","10+ yrs"];
+var AVAILABILITIES = ["Immediately","2 weeks notice","1 month notice","Negotiable"];
+var CAT_GRADIENTS = {
+  "Au Pair": ["#f9a8d4","#9d174d"],
+  "Domestic Worker": ["#a5f3fc","#0e7490"],
+  "Gardener": ["#bbf7d0","#166534"],
+  "Driver": ["#fde68a","#92400e"],
+};
+
+// Helper: add days to a date
+function addDays(date, days) {
+  var d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+function formatDate(date) {
+  return new Date(date).toLocaleDateString("en-ZA", {day:"numeric", month:"short", year:"numeric"});
+}
+function daysUntil(date) {
+  var diff = new Date(date) - new Date();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+}
+
+// Launch promo: 10 free days
+var LAUNCH_DATE = new Date();
+var PROMO_END = addDays(LAUNCH_DATE, 10);
+var PROMO_ACTIVE = new Date() <= PROMO_END;
+var PROMO_DAYS_LEFT = Math.max(0, daysUntil(PROMO_END));
+
+// Seed profiles
+var today = new Date();
+var SEED = [
+  { id:"p1", firstName:"Amara", role:"Au Pair", category:"Au Pair", yearsExp:4,
+    skills:["Childcare","First Aid","Homework Help","Meal Prep","Swimming Lessons"],
+    education:"Early Childhood Development Cert", availability:"Immediately",
+    about:"Warm, reliable au pair with 4 years caring for children aged 2-12. CPR certified and passionate about child development.",
+    price:99, email:"amara.care@email.com", phone:"+27 82 111 2233",
+    hasCriminalRecord:true, hasCv:true, photoDataUrl:null, photoColor:["#f9a8d4","#9d174d"],
+    status:"active", uploadDate: addDays(today,-15), expiryDate: addDays(today,75), nextBillingDate: addDays(today,15), monthlyFee:20 },
+  { id:"p2", firstName:"Thabo", role:"Domestic Worker", category:"Domestic Worker", yearsExp:7,
+    skills:["Deep Cleaning","Laundry","Ironing","Cooking","Grocery Shopping"],
+    education:"Grade 12", availability:"2 weeks notice",
+    about:"Dedicated domestic worker with 7 years experience in private households. Excellent references, trustworthy and thorough.",
+    price:99, email:"thabo.home@email.com", phone:"+27 83 444 5566",
+    hasCriminalRecord:true, hasCv:true, photoDataUrl:null, photoColor:["#a5f3fc","#0e7490"],
+    status:"active", uploadDate: addDays(today,-30), expiryDate: addDays(today,60), nextBillingDate: addDays(today,1), monthlyFee:20 },
+  { id:"p3", firstName:"Sipho", role:"Gardener", category:"Gardener", yearsExp:10,
+    skills:["Lawn Care","Pruning","Planting","Irrigation","Pest Control"],
+    education:"Horticulture Certificate", availability:"Immediately",
+    about:"Experienced gardener with a green thumb. Specialises in indigenous gardens and vegetable patches. Own tools.",
+    price:99, email:"sipho.gardens@email.com", phone:"+27 84 777 8899",
+    hasCriminalRecord:true, hasCv:true, photoDataUrl:null, photoColor:["#bbf7d0","#166534"],
+    status:"expiring", uploadDate: addDays(today,-60), expiryDate: addDays(today,8), nextBillingDate: addDays(today,8), monthlyFee:20 },
+  { id:"p4", firstName:"Nandi", role:"Au Pair", category:"Au Pair", yearsExp:2,
+    skills:["Childcare","Tutoring","Arts & Crafts","Meal Prep","Light Housekeeping"],
+    education:"BEd Early Childhood", availability:"1 month notice",
+    about:"Recent education graduate with a love for nurturing young minds. Energetic, patient and creative with children.",
+    price:99, email:"nandi.au@email.com", phone:"+27 85 000 1122",
+    hasCriminalRecord:true, hasCv:true, photoDataUrl:null, photoColor:["#f9a8d4","#9d174d"],
+    status:"active", uploadDate: addDays(today,-5), expiryDate: addDays(today,85), nextBillingDate: addDays(today,25), monthlyFee:20 },
+  { id:"p5", firstName:"Lucky", role:"Driver", category:"Driver", yearsExp:8,
+    skills:["Code 10 License","Defensive Driving","Navigation","Vehicle Maintenance","School Runs"],
+    education:"Grade 12 + PDP", availability:"Immediately",
+    about:"Professional driver with clean record and 8 years experience. Available for school runs, errands and full-time driving duties.",
+    price:99, email:"lucky.drives@email.com", phone:"+27 86 333 4455",
+    hasCriminalRecord:true, hasCv:true, photoDataUrl:null, photoColor:["#fde68a","#92400e"],
+    status:"active", uploadDate: addDays(today,-20), expiryDate: addDays(today,70), nextBillingDate: addDays(today,10), monthlyFee:20 },
+  { id:"p6", firstName:"Precious", role:"Domestic Worker", category:"Domestic Worker", yearsExp:5,
+    skills:["Cleaning","Cooking","Childcare","Laundry","Organising"],
+    education:"Grade 11", availability:"2 weeks notice",
+    about:"Hardworking and honest domestic worker. Experienced in full-day household management and light childcare.",
+    price:99, email:"precious.home@email.com", phone:"+27 87 666 7788",
+    hasCriminalRecord:true, hasCv:true, photoDataUrl:null, photoColor:["#a5f3fc","#0e7490"],
+    status:"expired", uploadDate: addDays(today,-95), expiryDate: addDays(today,-5), nextBillingDate: null, monthlyFee:20,
+    verified:true, verifiedDate:addDays(today,-95), rejectionReason:null },
+  { id:"p7", firstName:"Kefilwe", role:"Au Pair", category:"Au Pair", yearsExp:3,
+    skills:["Childcare","Cooking","Homework Help","First Aid"],
+    education:"Early Childhood Development Cert", availability:"Immediately",
+    about:"Caring and energetic au pair with 3 years experience. I love working with young children and creating fun learning activities.",
+    price:99, email:"kefilwe.care@email.com", phone:"+27 71 222 3344",
+    hasCriminalRecord:true, hasCv:true, photoDataUrl:null, photoColor:["#f9a8d4","#9d174d"],
+    status:"pending_review", uploadDate:addDays(today,-1), expiryDate:addDays(today,89), nextBillingDate:addDays(today,30), monthlyFee:20,
+    verified:false, verifiedDate:null, rejectionReason:null,
+    criminalClearanceDate:addDays(today,-10), cvFileName:"Kefilwe_CV.pdf", criminalFileName:"Kefilwe_Clearance.pdf" },
+  { id:"p8", firstName:"Bongani", role:"Driver", category:"Driver", yearsExp:6,
+    skills:["Code 10 License","School Runs","Defensive Driving","Vehicle Maintenance"],
+    education:"Grade 12 + PDP", availability:"2 weeks notice",
+    about:"Reliable and punctual driver with 6 years experience. Full PDP license. Available for full-time or part-time driving duties.",
+    price:99, email:"bongani.drives@email.com", phone:"+27 72 555 6677",
+    hasCriminalRecord:true, hasCv:true, photoDataUrl:null, photoColor:["#fde68a","#92400e"],
+    status:"pending_review", uploadDate:today, expiryDate:addDays(today,90), nextBillingDate:addDays(today,30), monthlyFee:20,
+    verified:false, verifiedDate:null, rejectionReason:null,
+    criminalClearanceDate:addDays(today,-50), cvFileName:"Bongani_CV.pdf", criminalFileName:"Bongani_Clearance.pdf" },
+  { id:"p9", firstName:"Zanele", role:"Domestic Worker", category:"Domestic Worker", yearsExp:9,
+    skills:["Deep Cleaning","Cooking","Laundry","Ironing","Childcare"],
+    education:"Grade 12", availability:"Immediately",
+    about:"Experienced and trustworthy domestic worker with 9 years in private households. Excellent references available.",
+    price:99, email:"zanele.home@email.com", phone:"+27 73 888 9900",
+    hasCriminalRecord:true, hasCv:true, photoDataUrl:null, photoColor:["#a5f3fc","#0e7490"],
+    status:"pending_review", uploadDate:addDays(today,-2), expiryDate:addDays(today,88), nextBillingDate:addDays(today,28), monthlyFee:20,
+    verified:false, verifiedDate:null, rejectionReason:null,
+    criminalClearanceDate:addDays(today,-15), cvFileName:"Zanele_CV.pdf", criminalFileName:"Zanele_Clearance.pdf" },
+];
+
+function expMatch(y, r) {
+  if (r === "Any") return true;
+  if (r === "0-2 yrs") return y <= 2;
+  if (r === "3-5 yrs") return y >= 3 && y <= 5;
+  if (r === "6-10 yrs") return y >= 6 && y <= 10;
+  if (r === "10+ yrs") return y > 10;
+  return true;
+}
+function isFirstNameOnly(v) { return v.trim().length > 0 && !/\s/.test(v.trim()); }
+function isWithinFourMonths(d) {
+  if (!d) return false;
+  var issued = new Date(d), cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - 4);
+  return issued >= cutoff && issued <= new Date();
+}
+function validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+function validPhone(v) {
+  if (!v.trim()) return false;
+  var digits = v.replace(/[\s\-\(\)\+]/g,"");
+  return /^[0-9]{9,12}$/.test(digits);
+}
+function validSAPhone(v) {
+  if (!v.trim()) return true; // phone optional but if entered must be valid
+  var digits = v.replace(/[\s\-\(\)\+]/g,"");
+  return /^(0|27)[0-9]{9}$/.test(digits) || /^[0-9]{9,12}$/.test(digits);
+}
+function nameIsClean(v) {
+  // No numbers, no special chars except hyphens (for compound names)
+  return /^[A-Za-zÀ-ž\-\s]{2,40}$/.test(v.trim()) && !/\s/.test(v.trim());
+}
+function aboutIsClean(v) {
+  var t = v.trim();
+  if (t.length < 30) return {ok:false, msg:"Please write at least 30 characters about yourself."};
+  if (t.length > 1000) return {ok:false, msg:"Please keep your description under 1000 characters."};
+  if (/\d{9,}/.test(t)) return {ok:false, msg:"Do not include phone numbers in your description."};
+  if (/@/.test(t)) return {ok:false, msg:"Do not include your email address in your description."};
+  if (/\d{1,3}\s+[A-Za-z]+\s+(Street|St|Road|Rd|Ave|Avenue|Drive|Dr|Close|Cl|Lane|Ln)/i.test(t))
+    return {ok:false, msg:"Do not include your home address in your description."};
+  return {ok:true, msg:""};
+}
+function validYearsExp(v) {
+  var n = parseInt(v);
+  return !isNaN(n) && n >= 0 && n <= 60;
+}
+function validFileType(file, types) {
+  if (!file) return false;
+  var name = file.name.toLowerCase();
+  return types.some(function(t){ return name.endsWith(t); });
+}
+
+var iCss = function(err) {
+  return { padding:"11px 14px", borderRadius:9,
+    border:"1.5px solid " + (err ? C.red : C.gray300),
+    fontSize:14, fontFamily:"inherit", background:C.white, color:C.gray700,
+    outline:"none", width:"100%", boxSizing:"border-box" };
+};
+
+var BADGE_COLORS = [
+  [C.mintLight,C.navy],[C.amberLight,C.amber],["#EDE9FE","#5B21B6"],
+  [C.redLight,C.red],["#DBEAFE","#1D4ED8"],["#FCE7F3","#9D174D"],
+];
+
+// ── UI Primitives ────────────────────────────────────────────────────────────
+
+function Badge(props) {
+  var bg = BADGE_COLORS[props.i % BADGE_COLORS.length][0];
+  var fg = BADGE_COLORS[props.i % BADGE_COLORS.length][1];
+  return <span style={{background:bg, color:fg, fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20}}>{props.label}</span>;
+}
+
+function Btn(props) {
+  var sz = {sm:{padding:"7px 16px",fontSize:12}, md:{padding:"11px 22px",fontSize:14}, lg:{padding:"15px 32px",fontSize:16}};
+  var vr = {
+    primary:{background:C.mint, color:C.navy},
+    navy:{background:C.navy, color:C.white},
+    ghost:{background:"transparent", color:C.navy, border:"1.5px solid "+C.gray300},
+    danger:{background:C.redLight, color:C.red, border:"1px solid #f5b8bc"},
+    purple:{background:C.purple, color:C.white},
+  };
+  var s = props.size || "md";
+  var v = props.variant || "primary";
+  return (
+    <button onClick={props.onClick} disabled={props.disabled} style={Object.assign({},
+      {border:"none", borderRadius:10, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+       transition:"all 0.18s", display:"inline-flex", alignItems:"center", gap:6,
+       justifyContent:"center", opacity:props.disabled?0.5:1, width:props.full?"100%":"auto"},
+      sz[s], vr[v], props.style||{})}>
+      {props.children}
+    </button>
+  );
+}
+
+function FInput(props) {
+  var rest = Object.assign({}, props);
+  delete rest.label; delete rest.error; delete rest.hint; delete rest.required;
+  return (
+    <div style={{display:"flex", flexDirection:"column", gap:5}}>
+      {props.label && <label style={{fontSize:12, fontWeight:700, color:C.gray700, letterSpacing:"0.04em", textTransform:"uppercase"}}>
+        {props.label}{props.required && <span style={{color:C.red}}> *</span>}
+      </label>}
+      {props.hint && <span style={{fontSize:11, color:C.gray500}}>{props.hint}</span>}
+      <input {...rest} style={Object.assign({}, iCss(props.error), rest.style||{})} />
+      {props.error && <span style={{fontSize:12, color:C.red}}>{props.error}</span>}
+    </div>
+  );
+}
+
+function FTextarea(props) {
+  var rest = Object.assign({}, props);
+  delete rest.label; delete rest.error; delete rest.hint; delete rest.required;
+  return (
+    <div style={{display:"flex", flexDirection:"column", gap:5}}>
+      {props.label && <label style={{fontSize:12, fontWeight:700, color:C.gray700, letterSpacing:"0.04em", textTransform:"uppercase"}}>
+        {props.label}{props.required && <span style={{color:C.red}}> *</span>}
+      </label>}
+      <textarea {...rest} style={Object.assign({}, iCss(props.error), {resize:"vertical", minHeight:96}, rest.style||{})} />
+      {props.error && <span style={{fontSize:12, color:C.red}}>{props.error}</span>}
+    </div>
+  );
+}
+
+function FSelect(props) {
+  var rest = Object.assign({}, props);
+  delete rest.label; delete rest.error; delete rest.hint; delete rest.required; delete rest.children;
+  return (
+    <div style={{display:"flex", flexDirection:"column", gap:5}}>
+      {props.label && <label style={{fontSize:12, fontWeight:700, color:C.gray700, letterSpacing:"0.04em", textTransform:"uppercase"}}>
+        {props.label}{props.required && <span style={{color:C.red}}> *</span>}
+      </label>}
+      <select {...rest} style={iCss(props.error)}>{props.children}</select>
+      {props.error && <span style={{fontSize:12, color:C.red}}>{props.error}</span>}
+    </div>
+  );
+}
+
+function FileDropZone(props) {
+  var [drag, setDrag] = useState(false);
+  var ref = useRef();
+  return (
+    <div style={{display:"flex", flexDirection:"column", gap:5}}>
+      <label style={{fontSize:12, fontWeight:700, color:C.gray700, letterSpacing:"0.04em", textTransform:"uppercase"}}>
+        {props.label} <span style={{color:C.red}}>*</span>
+      </label>
+      {props.hint && <span style={{fontSize:11, color:C.gray500}}>{props.hint}</span>}
+      <div onDragOver={function(e){e.preventDefault();setDrag(true);}}
+        onDragLeave={function(){setDrag(false);}}
+        onDrop={function(e){e.preventDefault();setDrag(false);props.onFile(e.dataTransfer.files[0]);}}
+        onClick={function(){ref.current.click();}}
+        style={{border:"2px dashed "+(props.error?C.red:drag?C.mint:props.file?C.green:C.gray300),
+          borderRadius:12, padding:"22px 16px", textAlign:"center", cursor:"pointer",
+          background:props.file?C.greenLight:drag?C.mintLight:C.gray50, transition:"all 0.2s"}}>
+        <input ref={ref} type="file" accept={props.accept} style={{display:"none"}}
+          onChange={function(e){props.onFile(e.target.files[0]);}} />
+        <div style={{fontSize:28, marginBottom:6}}>{props.file ? "✅" : props.icon||"📎"}</div>
+        {props.file
+          ? <div><div style={{fontSize:13, color:C.green, fontWeight:700}}>{props.file.name}</div>
+              <div style={{fontSize:11, color:C.gray500, marginTop:3}}>Click to replace</div></div>
+          : <div><div style={{fontSize:13, fontWeight:700, color:C.gray700}}>Drop here or <span style={{color:C.blue, textDecoration:"underline"}}>browse</span></div>
+              <div style={{fontSize:11, color:C.gray500, marginTop:3}}>{props.hint}</div></div>
+        }
+      </div>
+      {props.error && <span style={{fontSize:12, color:C.red}}>{props.error}</span>}
+    </div>
+  );
+}
+
+function PhotoUpload(props) {
+  var ref = useRef();
+  var colors = props.colors || ["#e0e7ff","#3730a3"];
+  return (
+    <div style={{display:"flex", flexDirection:"column", alignItems:"center", gap:10}}>
+      <div onClick={function(){ref.current.click();}} style={{
+        width:110, height:110, borderRadius:"50%", cursor:"pointer", overflow:"hidden",
+        background: props.previewUrl ? "url("+props.previewUrl+") center/cover"
+          : "linear-gradient(135deg,"+colors[0]+","+colors[1]+")",
+        display:"flex", alignItems:"center", justifyContent:"center",
+        border:"3px dashed "+(props.file?C.mint:C.gray300), fontSize:36, color:C.white}}>
+        {!props.previewUrl && "📷"}
+      </div>
+      <input ref={ref} type="file" accept="image/*" style={{display:"none"}}
+        onChange={function(e){props.onFile(e.target.files[0]);}} />
+      <span style={{fontSize:12, color:C.gray500}}>{props.file ? "Photo uploaded — click to change" : "Upload a photo (optional)"}</span>
+    </div>
+  );
+}
+
+function SkillInput(props) {
+  var [inp, setInp] = useState("");
+  function add() {
+    var t = inp.trim();
+    if (t && !props.value.includes(t)) props.onChange(props.value.concat([t]));
+    setInp("");
+  }
+  return (
+    <div style={{display:"flex", flexDirection:"column", gap:6}}>
+      <label style={{fontSize:12, fontWeight:700, color:C.gray700, letterSpacing:"0.04em", textTransform:"uppercase"}}>
+        Skills / Duties <span style={{color:C.red}}>*</span>
+      </label>
+      <div style={{display:"flex", gap:6, flexWrap:"wrap", minHeight:24}}>
+        {props.value.map(function(t) {
+          return <span key={t} style={{background:C.mintLight, color:C.navy, borderRadius:20,
+            padding:"4px 12px", fontSize:12, fontWeight:700, display:"flex", alignItems:"center", gap:5}}>
+            {t}
+            <button type="button" onClick={function(){props.onChange(props.value.filter(function(x){return x!==t;}));}}
+              style={{background:"none", border:"none", cursor:"pointer", color:C.gray500, fontSize:14, padding:0, lineHeight:1}}>×</button>
+          </span>;
+        })}
+      </div>
+      <div style={{display:"flex", gap:8}}>
+        <input value={inp} onChange={function(e){setInp(e.target.value);}}
+          onKeyDown={function(e){if(e.key==="Enter"||e.key===","){e.preventDefault();add();}}}
+          placeholder="Type a skill, press Enter..."
+          style={Object.assign({}, iCss(false), {flex:1})} />
+        <Btn variant="ghost" size="sm" onClick={add}>Add</Btn>
+      </div>
+      <span style={{fontSize:11, color:C.gray500}}>Press Enter after each skill</span>
+    </div>
+  );
+}
+
+function Steps(props) {
+  return (
+    <div style={{display:"flex", marginBottom:32}}>
+      {props.steps.map(function(s, i) {
+        return (
+          <div key={s} style={{flex:1, display:"flex", flexDirection:"column", alignItems:"center", position:"relative"}}>
+            {i < props.steps.length-1 && <div style={{position:"absolute", top:14, left:"50%", width:"100%",
+              height:2, background:i<props.current?C.mint:C.gray100, zIndex:0}} />}
+            <div style={{width:28, height:28, borderRadius:"50%", zIndex:1,
+              background:i<props.current?C.mint:i===props.current?C.navy:C.gray100,
+              color:i<=props.current?C.navy:C.gray500,
+              border:i===props.current?"2px solid "+C.mint:"none",
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800}}>
+              {i < props.current ? "✓" : i+1}
+            </div>
+            <div style={{fontSize:10, fontWeight:700, color:i===props.current?C.navy:C.gray500,
+              marginTop:5, textTransform:"uppercase", letterSpacing:"0.05em", textAlign:"center"}}>{s}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Modal(props) {
+  return (
+    <div onClick={props.onClose} style={{position:"fixed", inset:0, background:"rgba(10,20,40,0.6)",
+      backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20}}>
+      <div onClick={function(e){e.stopPropagation();}} style={{background:C.white, borderRadius:22,
+        padding:"38px 34px", width:"100%", maxWidth:props.wide?700:540, maxHeight:"92vh", overflowY:"auto",
+        boxShadow:"0 32px 80px rgba(0,0,0,0.22)"}}>
+        {props.children}
+      </div>
+    </div>
+  );
+}
+
+// Status badge for profile subscription state
+function StatusPill(props) {
+  var status = props.status;
+  var days = props.days;
+  if (status === "active") return (
+    <span style={{background:C.greenLight, color:C.green, fontSize:10, fontWeight:800,
+      padding:"3px 10px", borderRadius:20, display:"inline-flex", alignItems:"center", gap:4}}>
+      ● ACTIVE · {days}d left
+    </span>
+  );
+  if (status === "expiring") return (
+    <span style={{background:C.amberLight, color:C.amber, fontSize:10, fontWeight:800,
+      padding:"3px 10px", borderRadius:20, display:"inline-flex", alignItems:"center", gap:4}}>
+      ⚠ EXPIRING · {days}d left
+    </span>
+  );
+  if (status === "expired") return (
+    <span style={{background:C.redLight, color:C.red, fontSize:10, fontWeight:800,
+      padding:"3px 10px", borderRadius:20}}>
+      ✕ EXPIRED
+    </span>
+  );
+  if (status === "pending") return (
+    <span style={{background:C.purpleLight, color:C.purple, fontSize:10, fontWeight:800,
+      padding:"3px 10px", borderRadius:20}}>
+      ⏳ PENDING PAYMENT
+    </span>
+  );
+  return null;
+}
+
+// Simulated email notification card
+function EmailPreviewCard(props) {
+  var type = props.type;
+  var profile = props.profile;
+  var configs = {
+    month1: {
+      subject: "Your myplacements profile has been live for 1 month!",
+      icon: "📬",
+      color: C.blue,
+      bg: "#DBEAFE",
+      body: "Hi " + profile.firstName + ", your profile has been live for 30 days. Employers are viewing it! Your profile will remain active for another 60 days. Click below to renew early or update your details.",
+      cta: "Renew for another month — R20",
+    },
+    month2: {
+      subject: "Your profile expires in 30 days — renew now",
+      icon: "⚠️",
+      color: C.amber,
+      bg: C.amberLight,
+      body: "Hi " + profile.firstName + ", your myplacements profile expires in 30 days. To stay visible to employers, please renew your subscription for R20. If we do not hear from you, your profile will be removed on " + formatDate(profile.expiryDate) + ".",
+      cta: "Renew my profile — R20",
+    },
+    expiring: {
+      subject: "URGENT: Your profile expires in 7 days",
+      icon: "🔴",
+      color: C.red,
+      bg: C.redLight,
+      body: "Hi " + profile.firstName + ", this is your final reminder. Your myplacements profile expires on " + formatDate(profile.expiryDate) + ". After this date your profile will be permanently removed and employers will no longer be able to find you.",
+      cta: "Renew now before it is too late — R20",
+    },
+    deleted: {
+      subject: "Your myplacements profile has been removed",
+      icon: "🗑️",
+      color: C.gray500,
+      bg: C.gray100,
+      body: "Hi " + profile.firstName + ", your profile has been removed from myplacements as your 90-day listing period has ended. You are welcome to register again at any time.",
+      cta: "Re-register my profile",
+    },
+  };
+  var cfg = configs[type];
+  return (
+    <div style={{border:"1px solid "+C.gray100, borderRadius:14, overflow:"hidden", marginBottom:16}}>
+      <div style={{background:cfg.bg, padding:"12px 16px", display:"flex", alignItems:"center", gap:10}}>
+        <span style={{fontSize:20}}>{cfg.icon}</span>
+        <div>
+          <div style={{fontSize:11, color:C.gray500, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.05em"}}>Email sent to {profile.email}</div>
+          <div style={{fontSize:13, fontWeight:700, color:cfg.color}}>{cfg.subject}</div>
+        </div>
+      </div>
+      <div style={{padding:"14px 16px", background:C.white}}>
+        <p style={{fontSize:13, color:C.gray700, lineHeight:1.7, margin:"0 0 12px"}}>{cfg.body}</p>
+        <div style={{background:cfg.bg, borderRadius:8, padding:"10px 16px", fontSize:12,
+          fontWeight:700, color:cfg.color, display:"inline-block", cursor:"pointer"}}>
+          {cfg.cta} →
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Payment form component
+function PaymentForm(props) {
+  // Build the PayFast form and submit it — redirects to PayFast checkout
+  var orderId = props.orderId || ("MP-W-" + Date.now());
+  var workerName = props.workerName || "Worker";
+
+  function goToPayFast() {
+    // Create and auto-submit a hidden form to PayFast
+    var form = document.createElement("form");
+    form.method = "POST";
+    form.action = pfUrl();
+    form.style.display = "none";
+
+    var fields = {
+      merchant_id:   PAYFAST.merchantId,
+      merchant_key:  PAYFAST.merchantKey,
+      return_url:    PAYFAST.returnUrl,
+      cancel_url:    PAYFAST.cancelUrl,
+      notify_url:    PAYFAST.notifyUrl,
+      name_first:    workerName,
+      email_address: props.email || "",
+      m_payment_id:  orderId,
+      amount:        "20.00",
+      item_name:     "myplacements Profile Subscription",
+      item_description: "Monthly listing subscription — profile active for 90 days",
+      // Recurring billing
+      subscription_type: "1",
+      billing_date:  new Date().toISOString().slice(0,10),
+      recurring_amount: "20.00",
+      frequency:     "3",   // 3 = monthly
+      cycles:        "0",   // 0 = indefinite until cancelled
+    };
+
+    Object.keys(fields).forEach(function(key) {
+      var input = document.createElement("input");
+      input.type = "hidden";
+      input.name = key;
+      input.value = fields[key];
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+
+  return (
+    <div style={{display:"flex", flexDirection:"column", gap:16}}>
+      {/* Plan summary */}
+      <div style={{background:"linear-gradient(135deg,"+C.navy+","+C.navyMid+")", borderRadius:14,
+        padding:"20px 22px", color:C.white}}>
+        <div style={{fontSize:12, opacity:0.7, marginBottom:4, letterSpacing:"0.06em", textTransform:"uppercase"}}>
+          myplacements Subscription
+        </div>
+        <div style={{fontFamily:"'Cormorant Garamond',serif", fontSize:28, fontWeight:700}}>
+          R20 <span style={{fontSize:14, opacity:0.7}}>/month</span>
+        </div>
+        <div style={{fontSize:13, opacity:0.8, marginTop:6}}>
+          Profile active for 90 days · Renews monthly · Cancel anytime
+        </div>
+      </div>
+
+      {/* Order details */}
+      <div style={{background:C.gray50, borderRadius:12, padding:"16px"}}>
+        <div style={{display:"flex", justifyContent:"space-between", fontSize:13, color:C.gray700, marginBottom:6}}>
+          <span>Monthly subscription</span><span style={{fontWeight:700}}>R20.00</span>
+        </div>
+        <div style={{display:"flex", justifyContent:"space-between", fontSize:13, color:C.gray700, marginBottom:6}}>
+          <span>Order reference</span><span style={{fontWeight:700, fontSize:11}}>{orderId}</span>
+        </div>
+        <div style={{borderTop:"1px solid "+C.gray100, marginTop:10, paddingTop:10,
+          display:"flex", justifyContent:"space-between", fontWeight:800, fontSize:15, color:C.navy}}>
+          <span>Total today</span><span>R20.00</span>
+        </div>
+      </div>
+
+      {/* Payment methods */}
+      <div style={{display:"flex", gap:8, flexWrap:"wrap", justifyContent:"center"}}>
+        {["Visa","Mastercard","EFT","SnapScan","Mobicred"].map(function(m){
+          return <span key={m} style={{background:C.white, border:"1px solid "+C.gray100,
+            borderRadius:6, padding:"5px 12px", fontSize:11, fontWeight:700, color:C.gray500}}>{m}</span>;
+        })}
+      </div>
+
+      {PAYFAST.sandbox && (
+        <div style={{background:C.amberLight, borderRadius:10, padding:"12px 14px",
+          fontSize:12, color:C.amber, fontWeight:600}}>
+          🧪 Sandbox mode active — use test card 4000000000000002 on PayFast. No real money charged.
+        </div>
+      )}
+
+      <Btn variant="navy" full onClick={goToPayFast}>
+        Pay R20 via PayFast →
+      </Btn>
+      <p style={{fontSize:11, color:C.gray400, textAlign:"center", margin:0}}>
+        🔒 Secure payment via PayFast · 256-bit SSL · PCI DSS compliant
+      </p>
+    </div>
+  );
+}
+
+// Profile card for browse page
+function ProfileCard(props) {
+  var cv = props.cv;
+  var inCart = props.inCart;
+  var [hov, setHov] = useState(false);
+  var colors = cv.photoColor || ["#e0e7ff","#3730a3"];
+  var isExpired = cv.status === "expired";
+  var days = cv.expiryDate ? daysUntil(cv.expiryDate) : 0;
+
+  return (
+    <div onMouseEnter={function(){setHov(true);}} onMouseLeave={function(){setHov(false);}}
+      style={{background:isExpired?"#f8f8f8":C.white, borderRadius:22,
+        border:"1.5px solid "+(inCart?C.mint:hov&&!isExpired?"rgba(62,207,178,0.3)":"rgba(8,15,26,0.07)"),
+        padding:"24px 22px 20px", display:"flex", flexDirection:"column", gap:14,
+        transition:"all 0.3s cubic-bezier(0.34,1.56,0.64,1)",
+        transform:hov&&!isExpired?"translateY(-6px) scale(1.01)":"none",
+        boxShadow:hov&&!isExpired?"0 28px 64px rgba(8,15,26,0.16), 0 0 0 1px rgba(0,212,170,0.15)":"0 2px 12px rgba(8,15,26,0.06)",
+        position:"relative", opacity:isExpired?0.5:1}}>
+
+      {inCart && <span style={{position:"absolute", top:12, right:12, background:C.mint, color:C.navy,
+        fontSize:10, fontWeight:800, padding:"3px 10px", borderRadius:20}}>IN CART</span>}
+
+      {/* Status pill */}
+      <div><StatusPill status={cv.status} days={days} /></div>
+
+      <div style={{display:"flex", alignItems:"center", gap:14}}>
+        <div style={{width:64, height:64, borderRadius:"50%", flexShrink:0, overflow:"hidden",
+          background:cv.photoDataUrl?"url("+cv.photoDataUrl+") center/cover"
+            :"linear-gradient(135deg,"+colors[0]+","+colors[1]+")",
+          display:"flex", alignItems:"center", justifyContent:"center", border:"2px solid "+C.gray100}}>
+          {!cv.photoDataUrl && <span style={{color:C.white, fontSize:24, fontWeight:700,
+            fontFamily:"'Cormorant Garamond',serif"}}>{cv.firstName[0]}</span>}
+        </div>
+        <div>
+          <div style={{fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.navy}}>
+            {cv.firstName}
+          </div>
+          <div style={{fontSize:12, color:C.blue, fontWeight:600, marginTop:1}}>{cv.role}</div>
+        </div>
+      </div>
+
+      <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
+        <Badge label={cv.category} i={0} />
+        <Badge label={cv.yearsExp+"yr exp"} i={1} />
+        <Badge label={cv.availability} i={2} />
+        {cv.hasCriminalRecord && <Badge label="Clear record" i={4} />}
+      </div>
+
+      <p style={{fontSize:13, color:C.gray500, lineHeight:1.65, margin:0,
+        display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden"}}>
+        {cv.about}
+      </p>
+
+      <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
+        {cv.skills.slice(0,3).map(function(s,i){return <Badge key={s} label={s} i={i+3} />;} )}
+        {cv.skills.length > 3 && <Badge label={"+"+(cv.skills.length-3)} i={2} />}
+      </div>
+
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:4}}>
+        <div>
+          <div style={{fontSize:11, color:C.gray500}}>Unlock contact</div>
+          <div style={{fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700, color:C.navy}}>R{cv.price}</div>
+        </div>
+        <div style={{display:"flex", gap:8}}>
+          <Btn variant="ghost" size="sm" onClick={function(){props.onView(cv);}}>View</Btn>
+          {!isExpired && (inCart
+            ? <Btn variant="danger" size="sm" onClick={function(){props.onRemove(cv.id);}}>Remove</Btn>
+            : <Btn variant="primary" size="sm" onClick={function(){props.onAdd(cv);}}>+ Cart</Btn>
+          )}
+          {isExpired && <span style={{fontSize:11, color:C.gray300, fontWeight:600}}>Unlisted</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Top-level pages ────────────────────────────────────────────────────────
+
+function HomePage(props) {
+  var [sName, setSName] = useState("");
+  var [sEmail, setSEmail] = useState("");
+  var [sRole, setSRole] = useState("");
+  var [sSent, setSSent] = useState(false);
+
+  return (
+    <div>
+      <div style={{background:"linear-gradient(-45deg,#0F2137,#1A3A5C,#0F2137,#0a1a2e)",
+        backgroundSize:"400% 400%", animation:"gradientShift 12s ease infinite",
+        padding:"120px 40px 100px", textAlign:"center", color:C.white, position:"relative", overflow:"hidden",
+        minHeight:"85vh", display:"flex", alignItems:"center", justifyContent:"center"}}>
+
+        {/* Decorative orbs */}
+        <div style={{position:"absolute", top:"15%", left:"8%", width:340, height:340,
+          borderRadius:"50%", background:"radial-gradient(circle,rgba(62,207,178,0.12),transparent 70%)",
+          pointerEvents:"none"}} />
+        <div style={{position:"absolute", bottom:"20%", right:"6%", width:280, height:280,
+          borderRadius:"50%", background:"radial-gradient(circle,rgba(201,168,76,0.1),transparent 70%)",
+          pointerEvents:"none"}} />
+        <div style={{position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
+          width:900, height:900, borderRadius:"50%",
+          background:"radial-gradient(circle,rgba(0,212,170,0.04),transparent 60%)",
+          pointerEvents:"none"}} />
+
+        {/* Grid pattern */}
+        <div style={{position:"absolute", inset:0, opacity:0.025,
+          backgroundImage:"linear-gradient(rgba(255,255,255,0.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.5) 1px,transparent 1px)",
+          backgroundSize:"60px 60px", pointerEvents:"none"}} />
+
+        <div style={{position:"relative", maxWidth:780, margin:"0 auto"}}>
+          {/* Eyebrow */}
+          <div style={{display:"inline-flex", alignItems:"center", gap:10, marginBottom:36}}>
+            <div style={{width:32, height:1, background:"linear-gradient(90deg,transparent,rgba(0,212,170,0.6))"}} />
+            <span style={{fontSize:11, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase",
+              color:"rgba(62,207,178,0.8)"}}>South Africa's Trusted Placement Marketplace · Est. 2013</span>
+            <div style={{width:32, height:1, background:"linear-gradient(90deg,rgba(0,212,170,0.6),transparent)"}} />
+          </div>
+
+          {/* Main headline */}
+          <h1 style={{fontFamily:"'Cormorant Garamond',serif",
+            fontSize:"clamp(48px,7.5vw,90px)", fontWeight:600, margin:"0 0 10px", lineHeight:1.0,
+            letterSpacing:"-0.02em", color:C.white}}>
+            Find trusted help.
+          </h1>
+          <h1 style={{fontFamily:"'Cormorant Garamond',serif",
+            fontSize:"clamp(48px,7.5vw,90px)", fontWeight:600, margin:"0 0 32px", lineHeight:1.0,
+            letterSpacing:"-0.02em",
+            background:"linear-gradient(90deg,#3ECFB2,#C9A84C,#3ECFB2)",
+            backgroundSize:"200%", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+            backgroundClip:"text", animation:"shimmer 5s linear infinite"}}>
+            Anonymously.
+          </h1>
+
+          <p style={{fontSize:18, color:"rgba(255,255,255,0.6)", lineHeight:1.9,
+            marginBottom:52, maxWidth:560, margin:"0 auto 52px", fontWeight:300}}>
+            Verified au pairs, domestic workers, gardeners and drivers — privately matched to South African families since 2013.
+          </p>
+
+          {/* CTAs */}
+          <div style={{display:"flex", gap:16, justifyContent:"center", flexWrap:"wrap"}}>
+            <button onClick={function(){props.setPage("browse");}}
+              style={{padding:"16px 36px", borderRadius:12, fontSize:15, fontWeight:700,
+                border:"none", cursor:"pointer", fontFamily:"inherit",
+                background:"linear-gradient(135deg,#00D4AA,#00b896)",
+                color:C.navy, boxShadow:"0 8px 32px rgba(0,212,170,0.35)",
+                display:"flex", alignItems:"center", gap:8, transition:"all 0.3s",
+                letterSpacing:"0.01em"}}
+              onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 16px 40px rgba(0,212,170,0.45)";}}
+              onMouseLeave={function(e){e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="0 8px 32px rgba(0,212,170,0.35)";}}>
+              Browse Profiles →
+            </button>
+            <button onClick={function(){props.setPage("employee");}}
+              style={{padding:"16px 36px", borderRadius:12, fontSize:15, fontWeight:600,
+                background:"rgba(255,255,255,0.07)", color:C.white, fontFamily:"inherit",
+                border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer", transition:"all 0.3s",
+                backdropFilter:"blur(12px)"}}
+              onMouseEnter={function(e){e.currentTarget.style.background="rgba(255,255,255,0.12)";e.currentTarget.style.borderColor="rgba(255,255,255,0.25)";}}
+              onMouseLeave={function(e){e.currentTarget.style.background="rgba(255,255,255,0.07)";e.currentTarget.style.borderColor="rgba(255,255,255,0.15)";}}>
+              Register — R20/month
+            </button>
+          </div>
+
+          {/* Trust strip */}
+          <div style={{marginTop:64, display:"flex", justifyContent:"center", gap:40, flexWrap:"wrap"}}>
+            {[
+              {icon:"🛡️", label:"Manually verified"},
+              {icon:"🔒", label:"100% anonymous"},
+              {icon:"⚡", label:"Instant unlock"},
+              {icon:"📋", label:"Police cleared"},
+            ].map(function(t){
+              return <div key={t.label} style={{display:"flex", alignItems:"center", gap:8,
+                fontSize:12, color:"rgba(255,255,255,0.45)", fontWeight:500}}>
+                <span style={{fontSize:16}}>{t.icon}</span>{t.label}
+              </div>;
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Pricing banner */}
+      <div style={{background:"linear-gradient(135deg,#0F2137,#1A3A5C)",
+        padding:"22px 48px", display:"flex", justifyContent:"center",
+        gap:0, flexWrap:"wrap", alignItems:"center", borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+        {[
+          {icon:"👷", text:"Workers", sub:"R20/month to stay listed", color:C.mint},
+          {icon:"🏢", text:"Employers", sub:"R99 to unlock a profile", color:C.gold},
+          {icon:"🔒", text:"Privacy", sub:"100% anonymous until purchased", color:"rgba(255,255,255,0.7)"},
+        ].map(function(item, i) {
+          return <div key={item.text} style={{display:"flex", alignItems:"center", gap:14,
+            padding:"10px 36px",
+            borderRight:i<2?"1px solid rgba(255,255,255,0.08)":"none"}}>
+            <span style={{fontSize:22}}>{item.icon}</span>
+            <div>
+              <div style={{fontSize:13, fontWeight:800, color:item.color, letterSpacing:"0.02em"}}>{item.text}</div>
+              <div style={{fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1}}>{item.sub}</div>
+            </div>
+          </div>;
+        })}
+      </div>
+
+      {/* Categories */}
+      <div style={{padding:"96px 48px", background:C.sand, textAlign:"center"}}>
+        <div style={{marginBottom:56}}>
+          <div style={{fontSize:11, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase",
+            color:C.mint, marginBottom:16}}>What we offer</div>
+          <h2 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:"clamp(32px,5vw,52px)",
+            color:C.navy, marginBottom:12, fontWeight:600, letterSpacing:"-0.02em"}}>Who we place</h2>
+          <p style={{color:C.gray500, fontSize:16, maxWidth:480, margin:"0 auto", lineHeight:1.7, fontWeight:300}}>
+            Browse by category or search across all verified profiles nationwide.
+          </p>
+        </div>
+        <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",
+          gap:20, maxWidth:920, margin:"0 auto 72px"}}>
+          {[
+            {icon:"👶", label:"Au Pairs", desc:"Childcare, homework help & development", grad:"135deg,#1a0a33,#2d1060", accent:"#b88dff"},
+            {icon:"🏠", label:"Domestics", desc:"Cleaning, cooking & household care", grad:"135deg,#0a1a2e,#0F2137", accent:C.mint},
+            {icon:"🌿", label:"Gardeners", desc:"Lawn care, planting & landscaping", grad:"135deg,#061a0a,#0d3318", accent:"#4ade80"},
+            {icon:"🚗", label:"Drivers", desc:"School runs, errands & full-time", grad:"135deg,#1a1200,#332400", accent:C.gold},
+          ].map(function(item) {
+            return (
+              <button key={item.label} onClick={function(){props.setPage("browse");}}
+                style={{background:"linear-gradient("+item.grad+")",
+                  borderRadius:22, padding:"36px 24px 28px",
+                  border:"1px solid rgba(255,255,255,0.08)",
+                  cursor:"pointer", textAlign:"left", fontFamily:"inherit",
+                  boxShadow:"0 4px 24px rgba(8,15,26,0.15)", transition:"all 0.3s"}}
+                onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-6px) scale(1.02)";e.currentTarget.style.boxShadow="0 24px 60px rgba(8,15,26,0.25)";}}
+                onMouseLeave={function(e){e.currentTarget.style.transform="translateY(0) scale(1)";e.currentTarget.style.boxShadow="0 4px 24px rgba(8,15,26,0.15)";}}>
+                <div style={{width:52, height:52, borderRadius:16, marginBottom:18,
+                  background:"rgba(255,255,255,0.08)", display:"flex", alignItems:"center",
+                  justifyContent:"center", fontSize:26, border:"1px solid rgba(255,255,255,0.1)"}}>
+                  {item.icon}
+                </div>
+                <div style={{fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700,
+                  color:C.white, marginBottom:8, letterSpacing:"-0.01em"}}>{item.label}</div>
+                <div style={{fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.65,
+                  marginBottom:20}}>{item.desc}</div>
+                <div style={{fontSize:12, fontWeight:700, color:item.accent, display:"flex",
+                  alignItems:"center", gap:6}}>Browse profiles <span style={{fontSize:14}}>→</span></div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Suggest box */}
+        <div style={{maxWidth:520, margin:"0 auto", background:C.white, borderRadius:18,
+          padding:"32px", border:"1px solid "+C.gray100, boxShadow:"0 2px 16px rgba(0,0,0,0.06)"}}>
+          {sSent ? (
+            <div style={{textAlign:"center", padding:"16px 0"}}>
+              <div style={{fontSize:48, marginBottom:10}}>📬</div>
+              <div style={{fontFamily:"'Cormorant Garamond',serif", fontSize:22, color:C.navy, fontWeight:700, marginBottom:8}}>Thanks for your suggestion!</div>
+              <p style={{color:C.gray500, fontSize:14}}>We will review it and may add it to the platform soon.</p>
+            </div>
+          ) : (
+            <div style={{display:"flex", flexDirection:"column", gap:14}}>
+              <h3 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:22, color:C.navy, margin:0}}>💡 Suggest a new category</h3>
+              <p style={{fontSize:13, color:C.gray500, lineHeight:1.7, margin:0}}>Do not see the type of placement you need? Let us know.</p>
+              <FInput label="Your Name" placeholder="e.g. Sarah" value={sName} onChange={function(e){setSName(e.target.value);}} />
+              <FInput label="Your Email" type="email" placeholder="you@email.com" value={sEmail} onChange={function(e){setSEmail(e.target.value);}} />
+              <FInput label="Suggested Category" placeholder="e.g. Personal Chef, Tutor..." value={sRole} onChange={function(e){setSRole(e.target.value);}} />
+              <Btn variant="navy" full onClick={function(){if(sName&&sEmail&&sRole)setSSent(true);}}>Send Suggestion</Btn>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* How it works */}
+      <div style={{padding:"96px 48px", background:"linear-gradient(180deg,#0F2137,#0a1a2e)", textAlign:"center", position:"relative", overflow:"hidden"}}>
+        <div style={{position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
+          width:800, height:800, borderRadius:"50%",
+          background:"radial-gradient(circle,rgba(0,212,170,0.04),transparent 65%)",
+          pointerEvents:"none"}} />
+        <div style={{position:"relative"}}>
+          <div style={{fontSize:11, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase",
+            color:C.gold, marginBottom:16}}>The process</div>
+          <h2 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:"clamp(32px,5vw,52px)",
+            color:C.white, marginBottom:12, fontWeight:600, letterSpacing:"-0.02em"}}>How it works</h2>
+          <p style={{color:"rgba(255,255,255,0.4)", marginBottom:64, fontSize:15, fontWeight:300}}>
+            Private by design. Fair by default.
+          </p>
+          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",
+            gap:2, maxWidth:920, margin:"0 auto", background:"rgba(255,255,255,0.04)",
+            borderRadius:24, border:"1px solid rgba(255,255,255,0.06)", overflow:"hidden"}}>
+            {[
+              {n:"01", icon:"👤", t:"Register for R20/month", b:"Upload your profile, CV and police clearance. Your profile goes live once verified and auto-expires after 90 days.", color:C.mint},
+              {n:"02", icon:"📬", t:"We keep you updated", b:"At 30 and 60 days we email reminders. At 90 days your profile is automatically removed unless renewed.", color:C.gold},
+              {n:"03", icon:"💳", t:"Employers pay R99", b:"Families browse freely. They pay R99 via PayFast to unlock your full contact details and documents.", color:"#b88dff"},
+            ].map(function(item, i) {
+              return (
+                <div key={item.n} style={{padding:"44px 32px", textAlign:"left",
+                  borderRight:i<2?"1px solid rgba(255,255,255,0.06)":"none",
+                  background:"rgba(255,255,255,0.01)"}}>
+                  <div style={{fontFamily:"'Cormorant Garamond',serif", fontSize:64, fontWeight:700,
+                    color:"rgba(255,255,255,0.05)", lineHeight:1, marginBottom:20}}>
+                    {item.n}
+                  </div>
+                  <div style={{width:44, height:44, borderRadius:12, marginBottom:18,
+                    background:"rgba(255,255,255,0.06)", display:"flex", alignItems:"center",
+                    justifyContent:"center", fontSize:22, border:"1px solid rgba(255,255,255,0.08)"}}>
+                    {item.icon}
+                  </div>
+                  <h3 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:21,
+                    color:item.color, marginBottom:12, fontWeight:600}}>{item.t}</h3>
+                  <p style={{fontSize:13, color:"rgba(255,255,255,0.45)", lineHeight:1.8, margin:0, fontWeight:300}}>{item.b}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div style={{background:C.sand, padding:"64px 48px",
+        borderTop:"1px solid rgba(8,15,26,0.08)"}}>
+        <div style={{display:"flex", justifyContent:"center", gap:0, flexWrap:"wrap",
+          maxWidth:800, margin:"0 auto",
+          background:C.white, borderRadius:24, overflow:"hidden",
+          boxShadow:"0 4px 32px rgba(8,15,26,0.08)", border:"1px solid rgba(8,15,26,0.06)"}}>
+          {[
+            {n:props.profileCount+"+", l:"Verified profiles", sub:"Across South Africa", color:C.navy},
+            {n:"R20", l:"Per month", sub:"Workers stay listed", color:C.mint},
+            {n:"R99", l:"Per unlock", sub:"No monthly employer fees", color:C.gold},
+            {n:"2013", l:"Est.", sub:"Over a decade of placements", color:"#6B21D4"},
+          ].map(function(item, i) {
+            return <div key={item.l} style={{flex:"1 1 160px", textAlign:"center", padding:"36px 20px",
+              borderRight:i<3?"1px solid rgba(8,15,26,0.06)":"none"}}>
+              <div style={{fontFamily:"'Cormorant Garamond',serif", fontSize:44, fontWeight:700,
+                color:item.color, letterSpacing:"-0.03em", lineHeight:1}}>{item.n}</div>
+              <div style={{fontSize:13, fontWeight:700, color:C.navy, marginTop:8}}>{item.l}</div>
+              <div style={{fontSize:11, color:C.gray500, marginTop:3}}>{item.sub}</div>
+            </div>;
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BrowsePage(props) {
+  var [search, setSearch] = useState("");
+  var [cat, setCat] = useState("All");
+  var [exp, setExp] = useState("Any");
+  var [showExpired, setShowExpired] = useState(false);
+
+  var filtered = props.profiles.filter(function(p) {
+    if (!showExpired && p.status === "expired") return false;
+    if (p.status === "pending_review" || p.status === "rejected") return false;
+    if (cat !== "All" && p.category !== cat) return false;
+    if (!expMatch(p.yearsExp, exp)) return false;
+    if (search) {
+      var q = search.toLowerCase();
+      return p.firstName.toLowerCase().includes(q) || p.role.toLowerCase().includes(q) ||
+        p.skills.some(function(s){return s.toLowerCase().includes(q);});
+    }
+    return true;
+  });
+
+  return (
+    <div style={{maxWidth:1200, margin:"0 auto", padding:"40px 24px"}}>
+
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:4, flexWrap:"wrap", gap:8}}>
+        <div>
+          <h2 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:34, color:C.navy, margin:0}}>Browse</h2>
+          <p style={{color:C.gray500, fontSize:14, marginTop:4}}>{filtered.length} profiles shown</p>
+        </div>
+        <label style={{display:"flex", alignItems:"center", gap:8, fontSize:13, color:C.gray500, cursor:"pointer"}}>
+          <input type="checkbox" checked={showExpired} onChange={function(e){setShowExpired(e.target.checked);}} />
+          Show expired profiles
+        </label>
+      </div>
+
+      <div style={{background:C.white, borderRadius:14, padding:"20px 22px",
+        display:"flex", gap:14, flexWrap:"wrap", alignItems:"flex-end",
+        boxShadow:"0 2px 12px rgba(0,0,0,0.06)", marginBottom:28, border:"1px solid "+C.gray100}}>
+        <div style={{flex:"1 1 180px"}}>
+          <label style={{fontSize:11, fontWeight:700, color:C.gray700, letterSpacing:"0.05em",
+            textTransform:"uppercase", display:"block", marginBottom:5}}>Search</label>
+          <input value={search} onChange={function(e){setSearch(e.target.value);}}
+            placeholder="Name, role or skill..."
+            style={Object.assign({}, iCss(false), {width:"100%"})} />
+        </div>
+        <div>
+          <label style={{fontSize:11, fontWeight:700, color:C.gray700, letterSpacing:"0.05em",
+            textTransform:"uppercase", display:"block", marginBottom:5}}>Category</label>
+          <select value={cat} onChange={function(e){setCat(e.target.value);}}
+            style={Object.assign({}, iCss(false), {minWidth:160})}>
+            {CATEGORIES.map(function(c){return <option key={c}>{c}</option>;})}
+          </select>
+        </div>
+        <div>
+          <label style={{fontSize:11, fontWeight:700, color:C.gray700, letterSpacing:"0.05em",
+            textTransform:"uppercase", display:"block", marginBottom:5}}>Experience</label>
+          <select value={exp} onChange={function(e){setExp(e.target.value);}}
+            style={Object.assign({}, iCss(false), {minWidth:130})}>
+            {EXP_RANGES.map(function(r){return <option key={r}>{r}</option>;})}
+          </select>
+        </div>
+        <Btn variant="ghost" size="sm" onClick={function(){setSearch("");setCat("All");setExp("Any");}}>Clear</Btn>
+      </div>
+
+      {filtered.length === 0
+        ? <div style={{textAlign:"center", padding:"80px 0", color:C.gray300, fontSize:18}}>No profiles match your filters.</div>
+        : <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:22}}>
+            {filtered.map(function(p) {
+              return <ProfileCard key={p.id} cv={p}
+                inCart={props.cart.some(function(c){return c.id===p.id;})}
+                onAdd={props.onAdd} onRemove={props.onRemove} onView={props.onView} />;
+            })}
+          </div>
+      }
+    </div>
+  );
+}
+
+function EmployeePage(props) {
+  var [step, setStep] = useState(0);
+  var [firstName, setFirstName] = useState("");
+  var [about, setAbout] = useState("");
+  var [category, setCategory] = useState("Au Pair");
+  var [yearsExp, setYearsExp] = useState("");
+  var [education, setEducation] = useState("");
+  var [availability, setAvailability] = useState("Immediately");
+  var [skills, setSkills] = useState([]);
+  var [email, setEmail] = useState("");
+  var [phone, setPhone] = useState("");
+  var [cvFile, setCvFile] = useState(null);
+  var [criminalFile, setCriminalFile] = useState(null);
+  var [photoFile, setPhotoFile] = useState(null);
+  var [photoDataUrl, setPhotoDataUrl] = useState(null);
+  var [criminalDate, setCriminalDate] = useState("");
+  var [errors, setErrors] = useState({});
+  var [newProfile, setNewProfile] = useState(null);
+  var [paymentDone, setPaymentDone] = useState(false);
+  var [agreeNoGuarantee, setAgreeNoGuarantee] = useState(false);
+  var [agreePopia, setAgreePopia] = useState(false);
+
+  function handlePhotoFile(f) {
+    if (!f) return;
+    setPhotoFile(f);
+    var r = new FileReader();
+    r.onload = function(e) { setPhotoDataUrl(e.target.result); };
+    r.readAsDataURL(f);
+  }
+
+  function validate(s) {
+    var e = {};
+
+    if (s===0) {
+      // First name checks
+      if (!firstName.trim()) {
+        e.firstName = "First name is required.";
+      } else if (/\s/.test(firstName.trim())) {
+        e.firstName = "First name only — no surname or spaces.";
+      } else if (!/^[A-Za-zÀ-ž\-]{2,40}$/.test(firstName.trim())) {
+        e.firstName = "First name must contain letters only — no numbers or symbols.";
+      } else if (firstName.trim().length < 2) {
+        e.firstName = "First name must be at least 2 characters.";
+      }
+      // About checks
+      var aboutCheck = aboutIsClean(about);
+      if (!about.trim()) {
+        e.about = "Please write something about yourself.";
+      } else if (!aboutCheck.ok) {
+        e.about = aboutCheck.msg;
+      }
+      // Waiver checks
+      if (!agreeNoGuarantee) {
+        e.agreeNoGuarantee = "You must acknowledge that myplacements is a placement assistance platform and does not guarantee employment.";
+      }
+      if (!agreePopia) {
+        e.agreePopia = "You must accept the POPIA consent before your personal information can be stored on our platform.";
+      }
+    }
+
+    if (s===1) {
+      // Years experience
+      if (!yearsExp.toString().trim()) {
+        e.yearsExp = "Please enter your years of experience.";
+      } else if (!validYearsExp(yearsExp)) {
+        e.yearsExp = "Please enter a realistic number between 0 and 60.";
+      }
+      // Skills
+      if (!skills.length) {
+        e.skills = "Please add at least one skill or duty.";
+      } else if (skills.length < 2) {
+        e.skills = "Please add at least 2 skills so employers know what you offer.";
+      }
+      // Email
+      if (!email.trim()) {
+        e.email = "Email address is required.";
+      } else if (!validEmail(email)) {
+        e.email = "Please enter a valid email address (e.g. name@gmail.com).";
+      }
+      // Phone
+      if (!phone.trim()) {
+        e.phone = "Phone number is required so employers can contact you.";
+      } else if (!validSAPhone(phone)) {
+        e.phone = "Please enter a valid South African phone number (e.g. 082 123 4567).";
+      }
+      // Education
+      if (!education.trim()) {
+        e.education = "Please enter your highest qualification (e.g. Grade 12, Certificate).";
+      } else if (education.trim().length < 3) {
+        e.education = "Please describe your qualification in more detail.";
+      }
+    }
+
+    if (s===2) {
+      // CV file
+      if (!cvFile) {
+        e.cv = "Please upload your CV or profile document.";
+      } else if (!validFileType(cvFile, [".pdf",".doc",".docx"])) {
+        e.cv = "CV must be a PDF or Word document (.pdf, .doc, .docx).";
+      }
+      // Criminal clearance file
+      if (!criminalFile) {
+        e.criminal = "Police clearance certificate is required.";
+      } else if (!validFileType(criminalFile, [".pdf",".jpg",".jpeg",".png"])) {
+        e.criminal = "Clearance must be a PDF or image file (.pdf, .jpg, .png).";
+      }
+      // Clearance date
+      if (!criminalDate) {
+        e.criminalDate = "Please enter the date printed on your police clearance.";
+      } else {
+        var issued = new Date(criminalDate);
+        var today = new Date();
+        if (issued > today) {
+          e.criminalDate = "Issue date cannot be in the future.";
+        } else if (!isWithinFourMonths(criminalDate)) {
+          e.criminalDate = "Certificate is older than 4 months — please obtain a new one from SAPS.";
+        }
+      }
+    }
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function next() { if (validate(step)) setStep(step+1); }
+  function back() { setStep(step-1); }
+
+  function buildProfile() {
+    return {
+      id: "p"+Date.now(),
+      consentNoGuarantee: agreeNoGuarantee, consentPopia: agreePopia,
+      consentDate: new Date().toISOString(),
+      firstName: firstName.trim(), role: category, category: category,
+      yearsExp: parseInt(yearsExp)||1, skills: skills, education: education,
+      availability: availability, about: about, price: 99, email: email, phone: phone,
+      hasCv: !!cvFile, hasCriminalRecord: !!criminalFile,
+      photoDataUrl: photoDataUrl, photoColor: CAT_GRADIENTS[category]||["#e0e7ff","#3730a3"],
+      status: "pending", uploadDate: new Date(),
+      expiryDate: addDays(new Date(), 90), nextBillingDate: addDays(new Date(), 30), monthlyFee: 20,
+    };
+  }
+
+  function submitDocs() {
+    if (!validate(2)) return;
+    setNewProfile(buildProfile());
+    setStep(3); // go to payment step
+  }
+
+  function handlePaymentSuccess() {
+    var p = Object.assign({}, newProfile, {status:"active"});
+    props.onSubmit(p);
+    setPaymentDone(true);
+  }
+
+  // Success screen
+  if (paymentDone && newProfile) {
+    return (
+      <div style={{maxWidth:580, margin:"60px auto", padding:"0 24px"}}>
+        <div style={{background:C.white, borderRadius:22, padding:"40px 36px",
+          border:"1px solid "+C.gray100, boxShadow:"0 4px 24px rgba(0,0,0,0.08)", textAlign:"center"}}>
+          <div style={{fontSize:64, marginBottom:16}}>🎉</div>
+          <h2 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:32, color:C.navy, marginBottom:8}}>
+            You are live, {newProfile.firstName}!
+          </h2>
+          <p style={{color:C.gray500, lineHeight:1.75, marginBottom:28, fontSize:14}}>
+            Your profile is now active and visible to employers. Your subscription of R20/month has been activated.
+          </p>
+
+          {/* Timeline */}
+          <div style={{background:C.gray50, borderRadius:14, padding:"20px", marginBottom:28, textAlign:"left"}}>
+            <div style={{fontWeight:700, color:C.navy, fontSize:13, marginBottom:14}}>📅 Your profile timeline</div>
+            {[
+              {day:"Today", label:"Profile goes live", color:C.green, icon:"✅"},
+              {day:formatDate(addDays(new Date(),30)), label:"30-day check-in email sent to you", color:C.blue, icon:"📬"},
+              {day:formatDate(addDays(new Date(),60)), label:"60-day renewal reminder email", color:C.amber, icon:"⚠️"},
+              {day:formatDate(addDays(new Date(),90)), label:"Profile auto-removed if not renewed", color:C.red, icon:"🗑️"},
+            ].map(function(item) {
+              return (
+                <div key={item.day} style={{display:"flex", gap:14, alignItems:"flex-start", marginBottom:12}}>
+                  <div style={{fontSize:18, flexShrink:0}}>{item.icon}</div>
+                  <div>
+                    <div style={{fontSize:12, fontWeight:700, color:item.color}}>{item.day}</div>
+                    <div style={{fontSize:13, color:C.gray700}}>{item.label}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Email preview */}
+          <div style={{textAlign:"left", marginBottom:28}}>
+            <div style={{fontWeight:700, color:C.navy, fontSize:13, marginBottom:12}}>📧 Automated emails you will receive</div>
+            <EmailPreviewCard type="month1" profile={newProfile} />
+          </div>
+
+          <Btn variant="navy" full onClick={function(){setPaymentDone(false);setStep(0);
+            setFirstName("");setAbout("");setCategory("Au Pair");setYearsExp("");setEducation("");
+            setAvailability("Immediately");setSkills([]);setEmail("");setPhone("");
+            setCvFile(null);setCriminalFile(null);setPhotoFile(null);setPhotoDataUrl(null);setCriminalDate("");
+            setAgreeNoGuarantee(false);setAgreePopia(false);}}>
+            Register Another Profile
+          </Btn>
+        </div>
+      </div>
+    );
+  }
+
+  var colors = CAT_GRADIENTS[category]||["#e0e7ff","#3730a3"];
+
+  return (
+    <div style={{maxWidth:620, margin:"0 auto", padding:"48px 24px"}}>
+      <h2 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:32, color:C.navy, marginBottom:4}}>
+        Register Your Profile
+      </h2>
+      <p style={{color:C.gray500, fontSize:14, marginBottom:32, lineHeight:1.7}}>
+        Get listed for R20/month. Only your first name and professional details are shown publicly.
+      </p>
+      <Steps steps={["Profile","Details","Documents","Payment"]} current={step} />
+
+      <div style={{background:C.white, borderRadius:18, padding:"32px",
+        border:"1px solid "+C.gray100, boxShadow:"0 4px 20px rgba(0,0,0,0.06)"}}>
+
+        {step === 0 && (
+          <div style={{display:"flex", flexDirection:"column", gap:20}}>
+            {Object.keys(errors).length > 0 && (
+              <div style={{background:C.redLight, border:"1px solid #f5b8bc", borderRadius:10,
+                padding:"12px 16px", fontSize:12, color:C.red, fontWeight:600}}>
+                ⚠ Please fix the highlighted fields before continuing.
+              </div>
+            )}
+            <div style={{background:C.greenLight, borderRadius:10, padding:"12px 16px", fontSize:13, color:C.green, fontWeight:600}}>
+              This information is shown publicly to employers
+            </div>
+            <div style={{display:"flex", justifyContent:"center"}}>
+              <PhotoUpload file={photoFile} onFile={handlePhotoFile} previewUrl={photoDataUrl} colors={colors} />
+            </div>
+            <FInput label="First Name" required value={firstName}
+              onChange={function(e){setFirstName(e.target.value);}}
+              placeholder="e.g. Amara" hint="First name only — no surname." error={errors.firstName} />
+            {firstName && (isFirstNameOnly(firstName)
+              ? <div style={{background:C.greenLight, borderRadius:8, padding:"9px 14px", fontSize:12, color:C.green, fontWeight:700, marginTop:-12}}>First name only — looks good.</div>
+              : <div style={{background:C.redLight, borderRadius:8, padding:"9px 14px", fontSize:12, color:C.red, fontWeight:700, marginTop:-12}}>Space detected — first name only, no surname.</div>
+            )}
+            <FSelect label="Category" required value={category} onChange={function(e){setCategory(e.target.value);}}>
+              {CATEGORIES.filter(function(c){return c!=="All";}).map(function(c){return <option key={c}>{c}</option>;})}
+            </FSelect>
+            <FTextarea label="About Yourself" required rows={5} value={about}
+              onChange={function(e){setAbout(e.target.value);}}
+              placeholder="Describe your experience and personality. Do not include your surname, address, or employer names."
+              error={errors.about} />
+            <div style={{display:"flex", justifyContent:"space-between", marginTop:-14}}>
+              <span style={{fontSize:11, color:about.length<30?C.red:C.green}}>
+                {about.length<30 ? "Minimum 30 characters — "+about.length+"/30" : about.length+" characters ✓"}
+              </span>
+              <span style={{fontSize:11, color:about.length>900?C.amber:C.gray300}}>
+                {about.length}/1000
+              </span>
+            </div>
+            <div style={{background:C.redLight, borderRadius:10, padding:"12px 16px", fontSize:12, color:C.red, fontWeight:600}}>
+              Do not include: surname, address, contact details, or specific employer names
+            </div>
+
+            {/* ── WAIVERS ── */}
+            <div style={{borderTop:"2px solid "+C.gray100, paddingTop:22, display:"flex", flexDirection:"column", gap:14}}>
+              <div style={{fontSize:12, fontWeight:800, color:C.navy, textTransform:"uppercase",
+                letterSpacing:"0.08em"}}>Legal Agreements — Required</div>
+
+              {/* Waiver 1 — No guarantee of employment */}
+              <div style={{background:errors.agreeNoGuarantee?C.redLight:agreeNoGuarantee?C.greenLight:C.gray50,
+                border:"1.5px solid "+(errors.agreeNoGuarantee?C.red:agreeNoGuarantee?C.green:C.gray100),
+                borderRadius:12, padding:"16px 18px", transition:"all 0.2s"}}>
+                <label style={{display:"flex", gap:14, alignItems:"flex-start", cursor:"pointer"}}>
+                  <div style={{position:"relative", flexShrink:0, marginTop:2}}>
+                    <input type="checkbox" checked={agreeNoGuarantee}
+                      onChange={function(e){setAgreeNoGuarantee(e.target.checked);}}
+                      style={{width:20, height:20, accentColor:C.mint, cursor:"pointer"}} />
+                  </div>
+                  <div>
+                    <div style={{fontSize:13, fontWeight:700, color:C.navy, marginBottom:5}}>
+                      Placement Assistance Disclaimer
+                    </div>
+                    <div style={{fontSize:12, color:C.gray700, lineHeight:1.75}}>
+                      I understand and agree that <strong>myplacements is a placement assistance platform only</strong> and does not guarantee that I will be hired or placed in employment. myplacements connects workers with potential employers but does not make employment decisions, does not enter into any employment contract on my behalf, and accepts no liability for any outcome of the placement process. Success depends on individual employers reviewing my profile and making their own hiring decisions.
+                    </div>
+                  </div>
+                </label>
+                {errors.agreeNoGuarantee && (
+                  <div style={{fontSize:11, color:C.red, fontWeight:600, marginTop:8, paddingLeft:34}}>
+                    ⚠ {errors.agreeNoGuarantee}
+                  </div>
+                )}
+              </div>
+
+              {/* Waiver 2 — POPIA consent */}
+              <div style={{background:errors.agreePopia?C.redLight:agreePopia?C.greenLight:C.gray50,
+                border:"1.5px solid "+(errors.agreePopia?C.red:agreePopia?C.green:C.gray100),
+                borderRadius:12, padding:"16px 18px", transition:"all 0.2s"}}>
+                <label style={{display:"flex", gap:14, alignItems:"flex-start", cursor:"pointer"}}>
+                  <div style={{position:"relative", flexShrink:0, marginTop:2}}>
+                    <input type="checkbox" checked={agreePopia}
+                      onChange={function(e){setAgreePopia(e.target.checked);}}
+                      style={{width:20, height:20, accentColor:C.mint, cursor:"pointer"}} />
+                  </div>
+                  <div>
+                    <div style={{fontSize:13, fontWeight:700, color:C.navy, marginBottom:5}}>
+                      POPIA — Personal Information Consent
+                    </div>
+                    <div style={{fontSize:12, color:C.gray700, lineHeight:1.75}}>
+                      In accordance with the <strong>Protection of Personal Information Act (POPIA), Act 4 of 2013</strong>, I hereby give my informed consent for myplacements to collect, store and process my personal information — including my name, contact details, qualifications, employment history and police clearance certificate — for the purpose of facilitating domestic placement services in South Africa. I understand that: (1) my information will be stored securely in a database; (2) my contact details will only be shared with verified employers who have paid to unlock my profile; (3) I may request the removal of my information at any time by contacting myplacements; (4) my profile will be automatically removed after 90 days if not renewed; and (5) myplacements will not sell my personal information to third parties.
+                    </div>
+                  </div>
+                </label>
+                {errors.agreePopia && (
+                  <div style={{fontSize:11, color:C.red, fontWeight:600, marginTop:8, paddingLeft:34}}>
+                    ⚠ {errors.agreePopia}
+                  </div>
+                )}
+              </div>
+
+              {/* Confirmation stamp once both are ticked */}
+              {agreeNoGuarantee && agreePopia && (
+                <div style={{background:C.greenLight, border:"1px solid "+C.green, borderRadius:10,
+                  padding:"12px 16px", fontSize:12, color:C.green, fontWeight:700,
+                  display:"flex", alignItems:"center", gap:8}}>
+                  ✅ Agreements confirmed — you may continue to the next step.
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {step === 1 && (
+          <div style={{display:"flex", flexDirection:"column", gap:20}}>
+            {Object.keys(errors).length > 0 && (
+              <div style={{background:C.redLight, border:"1px solid #f5b8bc", borderRadius:10,
+                padding:"12px 16px", fontSize:12, color:C.red, fontWeight:600}}>
+                ⚠ Please fix the highlighted fields before continuing.
+              </div>
+            )}
+            <div className="form-grid-2" style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:16}}>
+              <FInput label="Years Experience" required type="number" min="0" max="60" value={yearsExp}
+                onChange={function(e){setYearsExp(e.target.value);}}
+                placeholder="e.g. 3" error={errors.yearsExp} />
+              <FSelect label="Availability" value={availability} onChange={function(e){setAvailability(e.target.value);}}>
+                {AVAILABILITIES.map(function(a){return <option key={a}>{a}</option>;})}
+              </FSelect>
+            </div>
+            <FInput label="Qualifications / Education" required value={education}
+              onChange={function(e){setEducation(e.target.value);}}
+              placeholder="e.g. Grade 12, Early Childhood Development Certificate"
+              error={errors.education}
+              hint="Enter your highest qualification" />
+            <SkillInput value={skills} onChange={setSkills} />
+            {errors.skills && <span style={{fontSize:12, color:C.red}}>{errors.skills}</span>}
+            <div style={{borderTop:"1px solid "+C.gray100, paddingTop:20}}>
+              <div style={{background:C.amberLight, borderRadius:10, padding:"12px 16px", fontSize:12, color:C.amber, fontWeight:600, marginBottom:16}}>
+                🔒 Contact details — only revealed to employers after purchase
+              </div>
+              <div className="form-grid-2" style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:16}}>
+                <FInput label="Email Address" required type="email" value={email}
+                  onChange={function(e){setEmail(e.target.value);}} placeholder="you@email.com" error={errors.email} />
+                <FInput label="Phone Number" required value={phone}
+                  onChange={function(e){setPhone(e.target.value);}}
+                  placeholder="082 123 4567" error={errors.phone}
+                  hint="SA number e.g. 082 123 4567" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div style={{display:"flex", flexDirection:"column", gap:22}}>
+            {Object.keys(errors).length > 0 && (
+              <div style={{background:C.redLight, border:"1px solid #f5b8bc", borderRadius:10,
+                padding:"12px 16px", fontSize:12, color:C.red, fontWeight:600}}>
+                ⚠ Please fix the highlighted fields before continuing.
+              </div>
+            )}
+            <div style={{background:C.gray50, borderRadius:10, padding:"14px 16px", fontSize:13, color:C.gray700, lineHeight:1.65}}>
+              Upload your profile document and a police clearance certificate issued within the last 4 months.
+            </div>
+            <FileDropZone label="Profile Document / CV" icon="📄"
+              hint="PDF, Word or similar" accept=".pdf,.doc,.docx"
+              file={cvFile} onFile={setCvFile} error={errors.cv} />
+            <FileDropZone label="Police Clearance Certificate" icon="🔒"
+              hint="Must be dated within the last 4 months" accept=".pdf,.jpg,.jpeg,.png"
+              file={criminalFile} onFile={setCriminalFile} error={errors.criminal} />
+            <FInput label="Clearance Issue Date" required type="date" value={criminalDate}
+              onChange={function(e){setCriminalDate(e.target.value);}}
+              hint="The date printed on your police clearance" error={errors.criminalDate} style={{maxWidth:260}} />
+            {criminalDate && isWithinFourMonths(criminalDate) && (
+              <div style={{background:C.greenLight, borderRadius:10, padding:"11px 16px", fontSize:13, color:C.green, fontWeight:600}}>
+                ✅ Date confirmed — within the 4-month window.
+              </div>
+            )}
+            {criminalDate && !isWithinFourMonths(criminalDate) && (
+              <div style={{background:C.redLight, borderRadius:10, padding:"11px 16px", fontSize:13, color:C.red, fontWeight:700}}>
+                This certificate is older than 4 months. Please obtain a new one.
+              </div>
+            )}
+          </div>
+        )}
+
+        {step === 3 && (
+          <div style={{display:"flex", flexDirection:"column", gap:0}}>
+            <h3 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:22, color:C.navy, marginBottom:6}}>
+              Activate your profile
+            </h3>
+            <p style={{fontSize:13, color:C.gray500, marginBottom:20, lineHeight:1.7}}>
+              Your profile is ready! Pay R20/month to go live. Your listing will be active for 90 days. We will email you reminders before it expires.
+            </p>
+            <PaymentForm onSuccess={handlePaymentSuccess}
+              email={email} workerName={firstName}
+              orderId={"MP-W-"+Date.now()} />
+          </div>
+        )}
+
+        {step < 3 && (
+          <div style={{display:"flex", justifyContent:"space-between", marginTop:28}}>
+            {step > 0 ? <Btn variant="ghost" onClick={back}>Back</Btn> : <div />}
+            {step < 2
+              ? <Btn variant="primary" onClick={next}>Continue</Btn>
+              : <Btn variant="navy" onClick={submitDocs}>Continue to Payment</Btn>
+            }
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EmployerPage(props) {
+  var [tab, setTab] = useState("signup");
+  var [companyName, setCompanyName] = useState("");
+  var [contactPerson, setContactPerson] = useState("");
+  var [erEmail, setErEmail] = useState("");
+  var [phone, setPhone] = useState("");
+  var [industry, setIndustry] = useState("");
+  var [password, setPassword] = useState("");
+  var [errors, setErrors] = useState({});
+
+  function validateSignup() {
+    var e = {};
+    if (!companyName.trim()) e.companyName = "Required.";
+    if (!contactPerson.trim()) e.contactPerson = "Required.";
+    if (!validEmail(erEmail)) e.email = "Valid email required.";
+    if (!phone.trim()) e.phone = "Required.";
+    if (!password||password.length<6) e.password = "Min 6 characters.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function submitSignup() {
+    if (!validateSignup()) return;
+    if (props.accounts.find(function(a){return a.email===erEmail;})) {
+      setErrors(function(e){return Object.assign({},e,{email:"Account already exists."});});
+      return;
+    }
+    props.onRegister({id:"er"+Date.now(), companyName:companyName, contactPerson:contactPerson,
+      email:erEmail, phone:phone, industry:industry, password:password});
+  }
+
+  function submitLogin() {
+    var found = props.accounts.find(function(a){return a.email===erEmail&&a.password===password;});
+    if (!found) { setErrors({login:"Incorrect email or password."}); return; }
+    props.onLogin(found);
+  }
+
+  if (props.currentEmployer) {
+    return (
+      <div style={{maxWidth:520, margin:"80px auto", textAlign:"center", padding:"0 24px"}}>
+        <div style={{fontSize:64}}>🏢</div>
+        <h2 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:32, color:C.navy, marginBottom:12}}>
+          Welcome back, {props.currentEmployer.contactPerson.split(" ")[0]}!
+        </h2>
+        <p style={{color:C.gray500, lineHeight:1.75, marginBottom:28}}>
+          Logged in as <strong>{props.currentEmployer.companyName}</strong>. Browse profiles and unlock contact details for R99 each.
+        </p>
+        <Btn variant="primary" size="lg" onClick={function(){props.setPage("browse");}}>Browse Profiles</Btn>
+        <div style={{marginTop:16}}>
+          <button onClick={props.onLogout} style={{background:"none", border:"none", color:C.gray500,
+            fontSize:13, cursor:"pointer", textDecoration:"underline", fontFamily:"inherit"}}>Log out</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{maxWidth:520, margin:"0 auto", padding:"48px 24px"}}>
+      <div style={{display:"flex", background:C.gray100, borderRadius:12, padding:4, marginBottom:32}}>
+        {[["signup","Create Account"],["login","Log In"]].map(function(item) {
+          return <button key={item[0]} onClick={function(){setTab(item[0]);setErrors({});}}
+            style={{flex:1, padding:"10px", borderRadius:9, fontSize:13, fontWeight:700,
+              border:"none", cursor:"pointer", fontFamily:"inherit",
+              background:tab===item[0]?C.navy:"transparent", color:tab===item[0]?C.white:C.gray500}}>{item[1]}</button>;
+        })}
+      </div>
+      <div style={{background:C.white, borderRadius:18, padding:"32px", border:"1px solid "+C.gray100, boxShadow:"0 4px 20px rgba(0,0,0,0.06)"}}>
+        {tab === "signup" ? (
+          <div style={{display:"flex", flexDirection:"column", gap:18}}>
+            <div>
+              <h2 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:26, color:C.navy, margin:0}}>Employer Account</h2>
+              <p style={{fontSize:13, color:C.gray500, marginTop:4}}>Free account. Pay R99 per profile you unlock.</p>
+            </div>
+            <FInput label="Company / Family Name" required value={companyName}
+              onChange={function(e){setCompanyName(e.target.value);}} placeholder="e.g. Smith Family" error={errors.companyName} />
+            <FInput label="Contact Person" required value={contactPerson}
+              onChange={function(e){setContactPerson(e.target.value);}} placeholder="Your full name" error={errors.contactPerson} />
+            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:16}}>
+              <FInput label="Email" required type="email" value={erEmail}
+                onChange={function(e){setErEmail(e.target.value);}} placeholder="you@email.com" error={errors.email} />
+              <FInput label="Phone" required value={phone}
+                onChange={function(e){setPhone(e.target.value);}} placeholder="+27 11 234 5678" error={errors.phone} />
+            </div>
+            <FInput label="Industry / Description" value={industry}
+              onChange={function(e){setIndustry(e.target.value);}} placeholder="e.g. Private household" />
+            <FInput label="Password" required type="password" value={password}
+              onChange={function(e){setPassword(e.target.value);}} placeholder="Min 6 characters" error={errors.password} />
+            <Btn variant="navy" full onClick={submitSignup} style={{marginTop:6}}>Create Account</Btn>
+          </div>
+        ) : (
+          <div style={{display:"flex", flexDirection:"column", gap:18}}>
+            <h2 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:26, color:C.navy, margin:0}}>Log In</h2>
+            {errors.login && <div style={{background:C.redLight, borderRadius:9, padding:"11px 14px",
+              fontSize:13, color:C.red, fontWeight:600}}>{errors.login}</div>}
+            <FInput label="Email" required type="email" value={erEmail}
+              onChange={function(e){setErEmail(e.target.value);}} placeholder="you@email.com" />
+            <FInput label="Password" required type="password" value={password}
+              onChange={function(e){setPassword(e.target.value);}} placeholder="Your password" />
+            <Btn variant="navy" full onClick={submitLogin} style={{marginTop:6}}>Log In</Btn>
+            <p style={{fontSize:12, color:C.gray500, textAlign:"center", margin:0}}>
+              No account?{" "}
+              <button onClick={function(){setTab("signup");}} style={{background:"none", border:"none",
+                color:C.blue, cursor:"pointer", fontWeight:700, fontSize:12, fontFamily:"inherit"}}>
+                Create one free
+              </button>
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Email notifications demo page
+function NotificationsPage(props) {
+  var expiring = props.profiles.filter(function(p){return p.status==="expiring";});
+  var active = props.profiles.filter(function(p){return p.status==="active";});
+  var expired = props.profiles.filter(function(p){return p.status==="expired";});
+
+  return (
+    <div style={{maxWidth:760, margin:"0 auto", padding:"40px 24px"}}>
+      <h2 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:34, color:C.navy, marginBottom:4}}>
+        Email Notification System
+      </h2>
+      <p style={{color:C.gray500, fontSize:14, marginBottom:32, lineHeight:1.7}}>
+        This shows the automated emails sent to workers at each stage of their 90-day listing period.
+        In the live product these are sent automatically — no manual work needed.
+      </p>
+
+      {/* Stats */}
+      <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))", gap:16, marginBottom:36}}>
+        {[
+          {label:"Active profiles", n:active.length, color:C.green, bg:C.greenLight},
+          {label:"Expiring soon", n:expiring.length, color:C.amber, bg:C.amberLight},
+          {label:"Expired / removed", n:expired.length, color:C.red, bg:C.redLight},
+        ].map(function(item) {
+          return <div key={item.label} style={{background:item.bg, borderRadius:14, padding:"20px",
+            textAlign:"center", border:"1px solid "+item.color+"33"}}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif", fontSize:36, fontWeight:700, color:item.color}}>{item.n}</div>
+            <div style={{fontSize:12, color:item.color, fontWeight:700}}>{item.label}</div>
+          </div>;
+        })}
+      </div>
+
+      {/* Profile list with email previews */}
+      {props.profiles.map(function(p) {
+        var days = p.expiryDate ? daysUntil(p.expiryDate) : 0;
+        var emailType = p.status==="expired" ? "deleted"
+          : p.status==="expiring" ? "expiring"
+          : days <= 60 ? "month2" : "month1";
+        return (
+          <div key={p.id} style={{background:C.white, borderRadius:16, padding:"22px 24px",
+            marginBottom:20, border:"1px solid "+C.gray100, boxShadow:"0 2px 8px rgba(0,0,0,0.04)"}}>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center",
+              marginBottom:16, flexWrap:"wrap", gap:8}}>
+              <div style={{display:"flex", alignItems:"center", gap:12}}>
+                <div style={{width:44, height:44, borderRadius:"50%",
+                  background:"linear-gradient(135deg,"+(p.photoColor||["#e0e7ff","#3730a3"])[0]+","+(p.photoColor||["#e0e7ff","#3730a3"])[1]+")",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  color:C.white, fontSize:18, fontWeight:700, fontFamily:"'Cormorant Garamond',serif", flexShrink:0}}>
+                  {p.firstName[0]}
+                </div>
+                <div>
+                  <div style={{fontWeight:700, color:C.navy}}>{p.firstName} · {p.role}</div>
+                  <div style={{fontSize:12, color:C.gray500}}>
+                    Uploaded: {formatDate(p.uploadDate)} · Expires: {formatDate(p.expiryDate)}
+                  </div>
+                </div>
+              </div>
+              <StatusPill status={p.status} days={days} />
+            </div>
+            <EmailPreviewCard type={emailType} profile={p} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+// ── Admin Panel ───────────────────────────────────────────────────────────────
+var ADMIN_PASSWORD = "Cardney@1";
+
+function AdminPage(props) {
+  var [authed, setAuthed] = useState(false);
+  var [pw, setPw] = useState("");
+  var [pwError, setPwError] = useState("");
+  var [selectedId, setSelectedId] = useState(null);
+  var [rejectModal, setRejectModal] = useState(null);
+  var [rejectReason, setRejectReason] = useState("");
+  var [tab, setTab] = useState("pending");
+  var [docViewer, setDocViewer] = useState(null);
+
+  var pending  = props.profiles.filter(function(p){return p.status==="pending_review";});
+  var approved = props.profiles.filter(function(p){return p.status==="active"||p.status==="expiring";});
+  var rejected = props.profiles.filter(function(p){return p.status==="rejected";});
+  var expired  = props.profiles.filter(function(p){return p.status==="expired";});
+
+  function login() {
+    if (pw === ADMIN_PASSWORD) { setAuthed(true); setPwError(""); }
+    else setPwError("Incorrect password.");
+  }
+  function approve(p) {
+    props.onUpdate(p.id,{status:"active",verified:true,verifiedDate:new Date()});
+    setSelectedId(null);
+  }
+  function doReject(p,reason) {
+    props.onUpdate(p.id,{status:"rejected",verified:false,rejectionReason:reason||"Documents could not be verified."});
+    setRejectModal(null); setRejectReason(""); setSelectedId(null);
+  }
+  function del(id) { props.onDelete(id); setSelectedId(null); }
+
+  if (!authed) {
+    return (
+      <div style={{minHeight:"calc(100vh - 64px)", background:"linear-gradient(150deg,#0a1628,#0F2137,#0a1628)",
+        display:"flex", alignItems:"center", justifyContent:"center", padding:24}}>
+        <div style={{background:"rgba(255,255,255,0.05)", backdropFilter:"blur(10px)",
+          borderRadius:24, padding:"48px 40px", width:"100%", maxWidth:400,
+          border:"1px solid rgba(255,255,255,0.1)", textAlign:"center",
+          boxShadow:"0 32px 80px rgba(0,0,0,0.5)"}}>
+          <div style={{fontSize:52, marginBottom:12}}>🔐</div>
+          <div style={{background:"rgba(62,207,178,0.15)", border:"1px solid rgba(62,207,178,0.3)",
+            borderRadius:20, padding:"5px 16px", fontSize:10, fontWeight:800, letterSpacing:"0.15em",
+            color:C.mint, display:"inline-block", marginBottom:20, textTransform:"uppercase"}}>
+            Admin Portal
+          </div>
+          <h2 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:30, color:C.white, marginBottom:8}}>
+            myplacements Admin
+          </h2>
+          <p style={{color:"rgba(255,255,255,0.5)", fontSize:13, marginBottom:32, lineHeight:1.6}}>
+            Authorised personnel only. Enter your admin password to continue.
+          </p>
+          <div style={{display:"flex", flexDirection:"column", gap:14, textAlign:"left"}}>
+            <div style={{display:"flex", flexDirection:"column", gap:5}}>
+              <label style={{fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.6)",
+                letterSpacing:"0.06em", textTransform:"uppercase"}}>Admin Password</label>
+              <input type="password" value={pw}
+                onChange={function(e){setPw(e.target.value);}}
+                onKeyDown={function(e){if(e.key==="Enter")login();}}
+                placeholder="Enter password"
+                style={{padding:"12px 14px", borderRadius:9,
+                  border:"1.5px solid "+(pwError?"#E63946":"rgba(255,255,255,0.15)"),
+                  fontSize:14, fontFamily:"inherit", background:"rgba(255,255,255,0.08)",
+                  color:C.white, outline:"none", width:"100%", boxSizing:"border-box"}}/>
+              {pwError && <span style={{fontSize:12, color:"#E63946", fontWeight:600}}>{pwError}</span>}
+            </div>
+            <button onClick={login} style={{padding:"13px", background:C.mint, color:C.navy,
+              border:"none", borderRadius:10, fontSize:14, fontWeight:800,
+              cursor:"pointer", fontFamily:"inherit", marginTop:4}}>
+              Enter Admin Panel →
+            </button>
+            <p style={{fontSize:11, color:"rgba(255,255,255,0.3)", textAlign:"center", margin:0}}>
+              myplacements admin access only
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  var tabList = tab==="pending"?pending:tab==="approved"?approved:tab==="rejected"?rejected:expired;
+
+  return (
+    <div style={{maxWidth:1100,margin:"0 auto",padding:"40px 24px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28,flexWrap:"wrap",gap:12}}>
+        <div>
+          <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:34,color:C.navy,margin:0}}>Admin Panel</h2>
+          <p style={{color:C.gray500,fontSize:14,marginTop:4}}>Review documents and verify worker profiles before they go live</p>
+        </div>
+        <button onClick={function(){setAuthed(false);setPw("");}}
+          style={{background:"none",border:"1px solid "+C.gray300,borderRadius:8,
+            padding:"8px 16px",fontSize:13,color:C.gray500,cursor:"pointer",fontFamily:"inherit"}}>
+          Log out of admin
+        </button>
+      </div>
+
+      {/* Stats tabs */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}}>
+        {[
+          {label:"Pending Review",n:pending.length,color:C.amber,bg:C.amberLight,key:"pending"},
+          {label:"Approved & Live",n:approved.length,color:C.green,bg:C.greenLight,key:"approved"},
+          {label:"Rejected",n:rejected.length,color:C.red,bg:C.redLight,key:"rejected"},
+          {label:"Expired",n:expired.length,color:C.gray500,bg:C.gray100,key:"expired"},
+        ].map(function(item){
+          return (
+            <button key={item.key} onClick={function(){setTab(item.key);}}
+              style={{background:tab===item.key?item.bg:C.white,borderRadius:14,padding:"18px 16px",
+                border:"2px solid "+(tab===item.key?item.color:C.gray100),
+                cursor:"pointer",fontFamily:"inherit",textAlign:"center",transition:"all 0.15s"}}>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:34,fontWeight:700,color:item.color}}>{item.n}</div>
+              <div style={{fontSize:12,color:item.color,fontWeight:700}}>{item.label}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      {tab==="pending" && pending.length>0 && (
+        <div style={{background:C.amberLight,border:"1px solid "+C.amber,borderRadius:12,
+          padding:"14px 20px",marginBottom:20,fontSize:13,color:C.amber,fontWeight:600}}>
+          ⚠️ {pending.length} profile{pending.length!==1?"s":""} waiting for document verification — profiles are hidden from employers until approved.
+        </div>
+      )}
+      {tab==="pending" && pending.length===0 && (
+        <div style={{background:C.greenLight,border:"1px solid "+C.green,borderRadius:12,
+          padding:"14px 20px",marginBottom:20,fontSize:13,color:C.green,fontWeight:600}}>
+          ✅ All caught up — no profiles pending review.
+        </div>
+      )}
+
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        {tabList.length===0 && (
+          <div style={{textAlign:"center",padding:"60px 0",color:C.gray300,fontSize:16}}>No profiles in this category.</div>
+        )}
+        {tabList.map(function(p){
+          var colors = p.photoColor||["#e0e7ff","#3730a3"];
+          var isPending = p.status==="pending_review";
+          var isRejected = p.status==="rejected";
+          var isOpen = selectedId===p.id;
+          var dateOk = p.criminalClearanceDate ? isWithinFourMonths(p.criminalClearanceDate) : false;
+          return (
+            <div key={p.id} style={{background:C.white,borderRadius:16,
+              border:"1.5px solid "+(isPending?C.amber:isRejected?C.red:C.gray100),
+              padding:"22px 24px",boxShadow:"0 2px 8px rgba(0,0,0,0.04)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12}}>
+                <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+                  <div style={{width:52,height:52,borderRadius:"50%",flexShrink:0,
+                    background:"linear-gradient(135deg,"+colors[0]+","+colors[1]+")",
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    color:C.white,fontSize:20,fontWeight:700,fontFamily:"'Cormorant Garamond',serif"}}>
+                    {p.firstName[0]}
+                  </div>
+                  <div>
+                    <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:700,color:C.navy}}>{p.firstName}</div>
+                    <div style={{fontSize:13,color:C.blue,fontWeight:600}}>{p.role}</div>
+                    <div style={{fontSize:12,color:C.gray500,marginTop:2}}>📧 {p.email} · 📞 {p.phone}</div>
+                    <div style={{fontSize:12,color:C.gray500}}>Submitted: {formatDate(p.uploadDate)} · {p.yearsExp} yrs exp</div>
+                    {isRejected&&p.rejectionReason&&(
+                      <div style={{fontSize:12,color:C.red,fontWeight:600,marginTop:4}}>Rejected: {p.rejectionReason}</div>
+                    )}
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+                  <Btn variant="ghost" size="sm" onClick={function(){setSelectedId(isOpen?null:p.id);}}>
+                    {isOpen?"Hide":"View Docs"}
+                  </Btn>
+                  {isPending && (
+                    <div style={{display:"flex",gap:8}}>
+                      <Btn variant="primary" size="sm" onClick={function(){approve(p);}}>✓ Approve</Btn>
+                      <Btn variant="danger" size="sm" onClick={function(){setRejectModal(p);}}>✕ Reject</Btn>
+                    </div>
+                  )}
+                  {isRejected && <Btn variant="ghost" size="sm" onClick={function(){approve(p);}}>Re-approve</Btn>}
+                  <Btn variant="danger" size="sm" onClick={function(){del(p.id);}}>🗑</Btn>
+                </div>
+              </div>
+
+              {isOpen && (
+                <div style={{marginTop:20,paddingTop:20,borderTop:"1px solid "+C.gray100}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+                    {/* Document checklist */}
+                    <div style={{background:C.gray50,borderRadius:12,padding:"16px"}}>
+                      <div style={{fontWeight:700,color:C.navy,fontSize:13,marginBottom:12}}>📋 Documents</div>
+                      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+
+                        {/* CV row */}
+                        <div style={{background:p.hasCv?C.greenLight:C.redLight,borderRadius:10,padding:"12px 14px"}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:p.hasCv?6:0}}>
+                            <span style={{fontSize:13,fontWeight:700,color:p.hasCv?C.green:C.red}}>📄 CV / Profile Document</span>
+                            <span style={{fontSize:11,fontWeight:700,color:p.hasCv?C.green:C.red}}>{p.hasCv?"Uploaded ✓":"Missing ✕"}</span>
+                          </div>
+                          {p.hasCv&&(
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                              <span style={{fontSize:11,color:C.gray500}}>{p.cvFileName||"document.pdf"}</span>
+                              <button onClick={function(){setDocViewer({type:"cv",profile:p});}}
+                                style={{background:C.green,color:C.white,border:"none",borderRadius:7,
+                                  padding:"5px 12px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                                  display:"flex",alignItems:"center",gap:5}}>
+                                👁 View Document
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Police clearance row */}
+                        <div style={{background:p.hasCriminalRecord?C.greenLight:C.redLight,borderRadius:10,padding:"12px 14px"}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:p.hasCriminalRecord?6:0}}>
+                            <span style={{fontSize:13,fontWeight:700,color:p.hasCriminalRecord?C.green:C.red}}>🔒 Police Clearance</span>
+                            <span style={{fontSize:11,fontWeight:700,color:p.hasCriminalRecord?C.green:C.red}}>{p.hasCriminalRecord?"Uploaded ✓":"Missing ✕"}</span>
+                          </div>
+                          {p.hasCriminalRecord&&(
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                              <span style={{fontSize:11,color:C.gray500}}>{p.criminalFileName||"clearance.pdf"}</span>
+                              <button onClick={function(){setDocViewer({type:"clearance",profile:p});}}
+                                style={{background:C.green,color:C.white,border:"none",borderRadius:7,
+                                  padding:"5px 12px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+                                  display:"flex",alignItems:"center",gap:5}}>
+                                👁 View Document
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Clearance date */}
+                        {p.criminalClearanceDate&&(
+                          <div style={{background:dateOk?C.greenLight:C.redLight,borderRadius:10,padding:"12px 14px"}}>
+                            <div style={{fontSize:13,fontWeight:700,color:dateOk?C.green:C.red}}>
+                              📅 Clearance Issue Date: {formatDate(p.criminalClearanceDate)}
+                            </div>
+                            <div style={{fontSize:11,color:dateOk?C.green:C.red,marginTop:3}}>
+                              {dateOk?"✓ Within the 4-month validity window":"✕ EXPIRED — older than 4 months. Request a new certificate."}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {/* Profile detail */}
+                    <div style={{background:C.gray50,borderRadius:12,padding:"16px"}}>
+                      <div style={{fontWeight:700,color:C.navy,fontSize:13,marginBottom:12}}>👤 Profile Summary</div>
+                      <div style={{fontSize:13,color:C.gray700,lineHeight:1.75}}>
+                        <div><strong>Category:</strong> {p.category}</div>
+                        <div><strong>Experience:</strong> {p.yearsExp} years</div>
+                        <div><strong>Education:</strong> {p.education||"Not specified"}</div>
+                        <div><strong>Availability:</strong> {p.availability}</div>
+                        <div style={{marginTop:8,color:C.gray500,lineHeight:1.6}}>{p.about}</div>
+                      </div>
+                      <div style={{marginTop:10,display:"flex",gap:6,flexWrap:"wrap"}}>
+                        {p.skills.map(function(s,i){return <Badge key={s} label={s} i={i} />;} )}
+                      </div>
+                    </div>
+                  </div>
+                  {isPending&&(
+                    <div style={{background:C.amberLight,borderRadius:12,padding:"16px",
+                      display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+                      <div>
+                        <div style={{fontWeight:700,color:C.amber,fontSize:14}}>Make a decision</div>
+                        <div style={{fontSize:12,color:C.amber,marginTop:2}}>Profile stays hidden until you approve. Rejection sends an email to the worker.</div>
+                      </div>
+                      <div style={{display:"flex",gap:10}}>
+                        <Btn variant="primary" onClick={function(){approve(p);}}>Approve Profile</Btn>
+                        <Btn variant="danger" onClick={function(){setRejectModal(p);}}>Reject & Notify</Btn>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Document viewer modal */}
+      {docViewer&&(
+        <Modal onClose={function(){setDocViewer(null);}} wide={true}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+            <div>
+              <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:24,color:C.navy,margin:0}}>
+                {docViewer.type==="cv"?"📄 CV / Profile Document":"🔒 Police Clearance Certificate"}
+              </h2>
+              <p style={{fontSize:12,color:C.gray500,marginTop:4}}>
+                {docViewer.profile.firstName} · {docViewer.type==="cv"?(docViewer.profile.cvFileName||"document.pdf"):(docViewer.profile.criminalFileName||"clearance.pdf")}
+              </p>
+            </div>
+            <span style={{background:C.greenLight,color:C.green,fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:20}}>
+              Uploaded ✓
+            </span>
+          </div>
+
+          {/* Simulated document preview */}
+          <div style={{background:C.gray50,borderRadius:14,padding:"0",overflow:"hidden",border:"1px solid "+C.gray100,marginBottom:20}}>
+            {/* Doc toolbar */}
+            <div style={{background:C.gray700,padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
+              <div style={{display:"flex",gap:6}}>
+                <div style={{width:12,height:12,borderRadius:"50%",background:"#ff5f57"}}/>
+                <div style={{width:12,height:12,borderRadius:"50%",background:"#ffbd2e"}}/>
+                <div style={{width:12,height:12,borderRadius:"50%",background:"#28c940"}}/>
+              </div>
+              <span style={{fontSize:11,color:"#aaa",marginLeft:8}}>
+                {docViewer.type==="cv"?(docViewer.profile.cvFileName||"document.pdf"):(docViewer.profile.criminalFileName||"clearance.pdf")}
+              </span>
+            </div>
+            {/* Doc body — realistic mock */}
+            <div style={{background:C.white,padding:"32px 40px",minHeight:320}}>
+              {docViewer.type==="cv"?(
+                <div style={{fontFamily:"Georgia,serif",maxWidth:560,margin:"0 auto"}}>
+                  <div style={{borderBottom:"2px solid "+C.navy,paddingBottom:16,marginBottom:20}}>
+                    <div style={{fontSize:22,fontWeight:700,color:C.navy}}>{docViewer.profile.firstName}</div>
+                    <div style={{fontSize:14,color:C.blue,marginTop:4}}>{docViewer.profile.role}</div>
+                    <div style={{fontSize:12,color:C.gray500,marginTop:6,display:"flex",gap:16}}>
+                      <span>📧 [hidden until purchased]</span>
+                      <span>📞 [hidden until purchased]</span>
+                    </div>
+                  </div>
+                  <div style={{marginBottom:18}}>
+                    <div style={{fontSize:11,fontWeight:700,color:C.navy,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Profile Summary</div>
+                    <div style={{fontSize:13,color:C.gray700,lineHeight:1.75}}>{docViewer.profile.about}</div>
+                  </div>
+                  <div style={{marginBottom:18}}>
+                    <div style={{fontSize:11,fontWeight:700,color:C.navy,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Experience</div>
+                    <div style={{fontSize:13,color:C.gray700}}>{docViewer.profile.yearsExp} years in {docViewer.profile.category}</div>
+                  </div>
+                  <div style={{marginBottom:18}}>
+                    <div style={{fontSize:11,fontWeight:700,color:C.navy,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Skills & Duties</div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      {docViewer.profile.skills.map(function(s){return <span key={s} style={{background:C.mintLight,color:C.navy,fontSize:11,padding:"3px 10px",borderRadius:20,fontWeight:600}}>{s}</span>;})}
+                    </div>
+                  </div>
+                  {docViewer.profile.education&&(
+                    <div>
+                      <div style={{fontSize:11,fontWeight:700,color:C.navy,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Education</div>
+                      <div style={{fontSize:13,color:C.gray700}}>{docViewer.profile.education}</div>
+                    </div>
+                  )}
+                  <div style={{marginTop:24,paddingTop:16,borderTop:"1px solid "+C.gray100,
+                    fontSize:10,color:C.gray300,textAlign:"center"}}>
+                    Document uploaded via myplacements · Contact details revealed after purchase only
+                  </div>
+                </div>
+              ):(
+                <div style={{fontFamily:"Georgia,serif",maxWidth:520,margin:"0 auto"}}>
+                  {/* Mock SAPS clearance certificate */}
+                  <div style={{textAlign:"center",marginBottom:24}}>
+                    <div style={{fontSize:13,fontWeight:700,color:C.navy,letterSpacing:"0.08em",textTransform:"uppercase"}}>
+                      South African Police Service
+                    </div>
+                    <div style={{fontSize:11,color:C.gray500,marginTop:2}}>Criminal Record Centre</div>
+                    <div style={{fontSize:16,fontWeight:700,color:C.navy,marginTop:12,textTransform:"uppercase",letterSpacing:"0.05em"}}>
+                      Police Clearance Certificate
+                    </div>
+                    <div style={{width:60,height:3,background:C.navy,margin:"10px auto"}}/>
+                  </div>
+                  <div style={{background:C.gray50,borderRadius:10,padding:"20px",marginBottom:16}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,fontSize:13}}>
+                      <div><span style={{color:C.gray500}}>Full Name: </span><strong>{docViewer.profile.firstName} [Surname hidden]</strong></div>
+                      <div><span style={{color:C.gray500}}>ID Number: </span><strong>*** *** **** ***</strong></div>
+                      <div><span style={{color:C.gray500}}>Date Issued: </span>
+                        <strong style={{color:isWithinFourMonths(docViewer.profile.criminalClearanceDate)?C.green:C.red}}>
+                          {docViewer.profile.criminalClearanceDate?formatDate(docViewer.profile.criminalClearanceDate):"N/A"}
+                        </strong>
+                      </div>
+                      <div><span style={{color:C.gray500}}>Certificate No: </span><strong>SAPS/2024/****</strong></div>
+                    </div>
+                  </div>
+                  <div style={{background:isWithinFourMonths(docViewer.profile.criminalClearanceDate)?C.greenLight:C.redLight,
+                    borderRadius:10,padding:"16px",textAlign:"center",marginBottom:16}}>
+                    <div style={{fontSize:15,fontWeight:700,
+                      color:isWithinFourMonths(docViewer.profile.criminalClearanceDate)?C.green:C.red}}>
+                      {isWithinFourMonths(docViewer.profile.criminalClearanceDate)
+                        ?"✓ NO CRIMINAL RECORD FOUND"
+                        :"⚠ CERTIFICATE EXPIRED — Older than 4 months"}
+                    </div>
+                    <div style={{fontSize:11,color:C.gray500,marginTop:6}}>
+                      This certificate confirms that the above-named individual has no criminal record as of the date of issue.
+                    </div>
+                  </div>
+                  <div style={{fontSize:10,color:C.gray300,textAlign:"center",marginTop:16}}>
+                    Simulated document preview · myplacements verification system
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div style={{display:"flex",gap:12,justifyContent:"flex-end"}}>
+            <Btn variant="ghost" onClick={function(){setDocViewer(null);}}>Close</Btn>
+            {docViewer.profile.status==="pending_review"&&(
+              <div style={{display:"flex",gap:10}}>
+                <Btn variant="danger" onClick={function(){setDocViewer(null);setRejectModal(docViewer.profile);}}>
+                  ✕ Reject Profile
+                </Btn>
+                <Btn variant="primary" onClick={function(){approve(docViewer.profile);setDocViewer(null);}}>
+                  ✓ Approve Profile
+                </Btn>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {rejectModal&&(
+        <Modal onClose={function(){setRejectModal(null);setRejectReason("");}}>
+          <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:24,color:C.navy,marginBottom:6}}>
+            Reject Profile — {rejectModal.firstName}
+          </h2>
+          <p style={{fontSize:13,color:C.gray500,marginBottom:20,lineHeight:1.7}}>
+            An email will be sent to <strong>{rejectModal.email}</strong> explaining what needs to be corrected.
+          </p>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <FSelect label="Rejection Reason" value={rejectReason} onChange={function(e){setRejectReason(e.target.value);}}>
+              <option value="">Select a reason...</option>
+              <option value="Police clearance is older than 4 months — please upload a recent certificate.">Clearance older than 4 months</option>
+              <option value="Police clearance document is unclear or unreadable — please resubmit a clearer copy.">Document unreadable</option>
+              <option value="CV or profile document is missing — please upload it before resubmitting.">CV missing</option>
+              <option value="Your profile contains personal information that must be removed (surname, address, employer names).">Contains personal info</option>
+              <option value="Documents appear to be invalid or do not match your profile — please resubmit originals.">Documents appear invalid</option>
+            </FSelect>
+            <FTextarea label="Additional notes (optional)" value={rejectReason}
+              onChange={function(e){setRejectReason(e.target.value);}}
+              placeholder="Add any specific instructions for the worker..." rows={3} />
+            <div style={{background:C.gray50,borderRadius:10,padding:"12px 14px",fontSize:12,color:C.gray500}}>
+              📧 Simulated email preview: "Hi {rejectModal.firstName}, your myplacements profile has been reviewed. {rejectReason||"Please check your documents and resubmit."} You can log back in and update your profile at any time."
+            </div>
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <Btn variant="ghost" onClick={function(){setRejectModal(null);setRejectReason("");}}>Cancel</Btn>
+              <Btn variant="danger" onClick={function(){doReject(rejectModal,rejectReason);}}>Send Rejection & Notify Worker</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+
+// ── MP Logo — accurate recreation of uploaded brand file ─────────────────────
+function MPLogo(props) {
+  var size = props.size || 36;
+  // Scale height proportionally — logo is roughly square
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 115" fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={Object.assign({flexShrink:0, display:"block"}, props.style||{})}>
+      <defs>
+        {/* Deep teal-green — M left stem and dark faces */}
+        <linearGradient id="mpDark" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+          <stop offset="0%" stopColor="#2a9055"/>
+          <stop offset="100%" stopColor="#155c33"/>
+        </linearGradient>
+        {/* Mid green — M left diagonal face */}
+        <linearGradient id="mpMid" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+          <stop offset="0%" stopColor="#28a04e"/>
+          <stop offset="100%" stopColor="#176635"/>
+        </linearGradient>
+        {/* Lime yellow-green — M right peak + P bowl overlay */}
+        <linearGradient id="mpLime" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+          <stop offset="0%" stopColor="#a8d932"/>
+          <stop offset="100%" stopColor="#72a820"/>
+        </linearGradient>
+        {/* Light lime — lower P stem and inner glow */}
+        <linearGradient id="mpLight" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+          <stop offset="0%" stopColor="#c5e85a"/>
+          <stop offset="100%" stopColor="#88c030"/>
+        </linearGradient>
+        {/* P bowl base */}
+        <linearGradient id="mpPbowl" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
+          <stop offset="0%" stopColor="#28a04e"/>
+          <stop offset="100%" stopColor="#3aaa5c"/>
+        </linearGradient>
+      </defs>
+
+      {/* ── M LEFT VERTICAL STEM (dark teal, far left) ── */}
+      <rect x="8" y="8" width="17" height="72" rx="3" fill="url(#mpDark)"/>
+
+      {/* ── M LEFT DIAGONAL FACE (mid green, slopes to centre valley) ── */}
+      <path d="M8 8 L25 8 L56 55 L39 55 Z" fill="url(#mpMid)"/>
+
+      {/* ── M RIGHT DIAGONAL — lime, creates the pointed V valley ── */}
+      <path d="M56 8 L73 8 L56 55 L39 55 Z" fill="url(#mpLime)"/>
+
+      {/* ── M RIGHT PEAK — small upward tab, lime ── */}
+      <path d="M56 8 L73 8 L73 28 L56 28 Z" fill="url(#mpLime)"/>
+
+      {/* ── P VERTICAL STEM — shares x position with M right peak ── */}
+      <rect x="56" y="8" width="17" height="80" rx="3" fill="url(#mpDark)"/>
+
+      {/* ── P BOWL BODY — the C-shaped outer shell ── */}
+      <path d="
+        M56 8
+        L80 8
+        Q112 8 112 38
+        Q112 68 80 68
+        L56 68
+        L56 52
+        L78 52
+        Q94 52 94 38
+        Q94 24 78 24
+        L56 24
+        Z"
+        fill="url(#mpPbowl)"/>
+
+      {/* ── P BOWL LIME HIGHLIGHT — top half of bowl is lighter ── */}
+      <path d="
+        M68 8
+        L80 8
+        Q112 8 112 38
+        Q112 52 98 60
+        L68 50
+        L68 24
+        L78 24
+        Q94 24 94 38
+        Q94 44 88 48
+        L68 40
+        Z"
+        fill="url(#mpLime)" opacity="0.65"/>
+
+      {/* ── WHITE CIRCLE COUNTER inside P ── */}
+      <circle cx="88" cy="38" r="11" fill="white"/>
+
+      {/* ── LOWER SHADOW TAIL — the dark wedge below M valley ── */}
+      <path d="M39 55 L56 55 L56 88 L39 88 Z" fill="url(#mpLight)" opacity="0.7"/>
+
+      {/* ── DARK OVERLAP NOTCH — the shadow where M and P stems cross ── */}
+      <path d="M56 55 L73 28 L73 55 Z" fill="url(#mpDark)" opacity="0.35"/>
+    </svg>
+  );
+}
+
+// ── Root App ──────────────────────────────────────────────────────────────────
+function App() {
+  var [page, setPage] = useState("home");
+  var [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  var [profiles, setProfiles] = useState(SEED);
+  var [cart, setCart] = useState([]);
+  var [viewProfile, setViewProfile] = useState(null);
+  var [cartOpen, setCartOpen] = useState(false);
+  var [checkoutOpen, setCheckoutOpen] = useState(false);
+  var [purchaseSuccess, setPurchaseSuccess] = useState(false);
+  var [purchasedProfiles, setPurchasedProfiles] = useState([]);
+  var [checkoutEmail, setCheckoutEmail] = useState("");
+  var [payfastOpen, setPayfastOpen] = useState(false);
+  var [employerAccounts, setEmployerAccounts] = useState([]);
+  var [currentEmployer, setCurrentEmployer] = useState(null);
+
+  function updateProfile(id, updates) {
+    setProfiles(function(list) {
+      return list.map(function(p) { return p.id===id ? Object.assign({},p,updates) : p; });
+    });
+  }
+  function deleteProfile(id) {
+    setProfiles(function(list) { return list.filter(function(p){return p.id!==id;}); });
+  }
+
+  function addToCart(p) {
+    if (!currentEmployer) { setPage("employer"); return; }
+    if (p.status === "expired") return;
+    setCart(function(c) { return c.find(function(x){return x.id===p.id;}) ? c : c.concat([p]); });
+  }
+  function removeFromCart(id) { setCart(function(c){return c.filter(function(x){return x.id!==id;});}); }
+  var cartTotal = cart.reduce(function(s,p){return s+p.price;}, 0);
+
+  function handleCheckout() {
+    var email = checkoutEmail || (currentEmployer && currentEmployer.email) || "";
+    if (!validEmail(email)) return;
+
+    // Store cart in sessionStorage so we can retrieve it after PayFast returns
+    var orderData = {
+      profiles: cart,
+      employerEmail: email,
+      employerName: currentEmployer ? currentEmployer.contactPerson : "",
+      companyName: currentEmployer ? currentEmployer.companyName : "",
+      total: cartTotal,
+      orderId: "MP-" + Date.now(),
+    };
+    try { sessionStorage.setItem("mp_pending_order", JSON.stringify(orderData)); } catch(e) {}
+
+    // Close checkout modal and show PayFast redirect screen
+    setCheckoutOpen(false);
+    setPayfastOpen(true);
+  }
+
+  function handlePayfastReturn(success) {
+    setPayfastOpen(false);
+    if (!success) return;
+    // Retrieve stored order
+    var raw = "";
+    try { raw = sessionStorage.getItem("mp_pending_order") || ""; } catch(e) {}
+    var order = raw ? JSON.parse(raw) : {profiles: cart, employerEmail: checkoutEmail};
+    try { sessionStorage.removeItem("mp_pending_order"); } catch(e) {}
+    setPurchasedProfiles(order.profiles || cart);
+    setCart([]);
+    setPurchaseSuccess(true);
+  }
+
+  var navItems = [
+    ["Browse","browse"],
+    ["Register","employee"],
+    ["Employers","employer"],
+  ];
+
+  return (
+    <div style={{minHeight:"100vh", background:C.sand, fontFamily:"'Outfit','Segoe UI',sans-serif"}}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0;}
+        html{scroll-behavior:smooth;}
+        body{background:#F5F0E8;}
+        input:focus,select:focus,textarea:focus{border-color:#3ECFB2!important;box-shadow:0 0 0 3px rgba(62,207,178,0.12);outline:none;}
+        button{font-family:inherit;}
+        ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#c0c8d8;border-radius:3px}
+        @keyframes shimmer{0%{background-position:200% center}100%{background-position:-200% center}}
+        @keyframes gradientShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+        .card-hover{transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+        .card-hover:hover{transform:translateY(-6px) scale(1.01);}
+
+        /* ── Custom MP cursor — !important overrides ALL inline styles ── */
+        @media(hover:hover){
+
+          /* Every single element — default MP cursor */
+          *{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 120 115'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0%25' stop-color='%232a9055'/%3E%3Cstop offset='100%25' stop-color='%23155c33'/%3E%3C/linearGradient%3E%3ClinearGradient id='b' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%2328a04e'/%3E%3Cstop offset='100%25' stop-color='%23176635'/%3E%3C/linearGradient%3E%3ClinearGradient id='c' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23a8d932'/%3E%3Cstop offset='100%25' stop-color='%2372a820'/%3E%3C/linearGradient%3E%3ClinearGradient id='e' x1='0' y1='0' x2='1' y2='0'%3E%3Cstop offset='0%25' stop-color='%2328a04e'/%3E%3Cstop offset='100%25' stop-color='%233aaa5c'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='8' y='8' width='17' height='72' rx='3' fill='url(%23a)'/%3E%3Cpath d='M8 8 L25 8 L56 55 L39 55 Z' fill='url(%23b)'/%3E%3Cpath d='M56 8 L73 8 L56 55 L39 55 Z' fill='url(%23c)'/%3E%3Crect x='56' y='8' width='17' height='80' rx='3' fill='url(%23a)'/%3E%3Cpath d='M56 8 L80 8 Q112 8 112 38 Q112 68 80 68 L56 68 L56 52 L78 52 Q94 52 94 38 Q94 24 78 24 L56 24 Z' fill='url(%23e)'/%3E%3Ccircle cx='88' cy='38' r='11' fill='white'/%3E%3Cpath d='M39 55 L56 55 L56 88 L39 88 Z' fill='url(%23c)' opacity='.7'/%3E%3C/svg%3E") 3 3, auto !important;}
+
+          /* Clickable elements — slightly larger MP, overrides pointer */
+          a,button,select,label,[role=button],[role=tab],
+          [type=button],[type=submit],[type=reset],[type=checkbox],[type=radio]{
+            cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 120 115'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0%25' stop-color='%232a9055'/%3E%3Cstop offset='100%25' stop-color='%23155c33'/%3E%3C/linearGradient%3E%3ClinearGradient id='b' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%2328a04e'/%3E%3Cstop offset='100%25' stop-color='%23176635'/%3E%3C/linearGradient%3E%3ClinearGradient id='c' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23a8d932'/%3E%3Cstop offset='100%25' stop-color='%2372a820'/%3E%3C/linearGradient%3E%3ClinearGradient id='e' x1='0' y1='0' x2='1' y2='0'%3E%3Cstop offset='0%25' stop-color='%2328a04e'/%3E%3Cstop offset='100%25' stop-color='%233aaa5c'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='8' y='8' width='17' height='72' rx='3' fill='url(%23a)'/%3E%3Cpath d='M8 8 L25 8 L56 55 L39 55 Z' fill='url(%23b)'/%3E%3Cpath d='M56 8 L73 8 L56 55 L39 55 Z' fill='url(%23c)'/%3E%3Crect x='56' y='8' width='17' height='80' rx='3' fill='url(%23a)'/%3E%3Cpath d='M56 8 L80 8 Q112 8 112 38 Q112 68 80 68 L56 68 L56 52 L78 52 Q94 52 94 38 Q94 24 78 24 L56 24 Z' fill='url(%23e)'/%3E%3Ccircle cx='88' cy='38' r='11' fill='white'/%3E%3Cpath d='M39 55 L56 55 L56 88 L39 88 Z' fill='url(%23c)' opacity='.7'/%3E%3C/svg%3E") 3 3, pointer !important;}
+
+          /* Click / press state — darker, smaller, white ring */
+          a:active,button:active,select:active,
+          [role=button]:active,[role=tab]:active{
+            cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 120 115'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0%25' stop-color='%23155c33'/%3E%3Cstop offset='100%25' stop-color='%230d3d22'/%3E%3C/linearGradient%3E%3ClinearGradient id='b' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23176635'/%3E%3Cstop offset='100%25' stop-color='%230d3d22'/%3E%3C/linearGradient%3E%3ClinearGradient id='c' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%2372a820'/%3E%3Cstop offset='100%25' stop-color='%234d7215'/%3E%3C/linearGradient%3E%3ClinearGradient id='e' x1='0' y1='0' x2='1' y2='0'%3E%3Cstop offset='0%25' stop-color='%23176635'/%3E%3Cstop offset='100%25' stop-color='%231e7a42'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='60' cy='57' r='54' fill='none' stroke='white' stroke-width='5' opacity='.25'/%3E%3Crect x='8' y='8' width='17' height='72' rx='3' fill='url(%23a)'/%3E%3Cpath d='M8 8 L25 8 L56 55 L39 55 Z' fill='url(%23b)'/%3E%3Cpath d='M56 8 L73 8 L56 55 L39 55 Z' fill='url(%23c)'/%3E%3Crect x='56' y='8' width='17' height='80' rx='3' fill='url(%23a)'/%3E%3Cpath d='M56 8 L80 8 Q112 8 112 38 Q112 68 80 68 L56 68 L56 52 L78 52 Q94 52 94 38 Q94 24 78 24 L56 24 Z' fill='url(%23e)'/%3E%3Ccircle cx='88' cy='38' r='11' fill='white' opacity='.9'/%3E%3Cpath d='M39 55 L56 55 L56 88 L39 88 Z' fill='url(%23c)' opacity='.7'/%3E%3C/svg%3E") 3 3, pointer !important;}
+
+          /* Text fields stay as text cursor */
+          input[type=text],input[type=email],input[type=password],
+          input[type=number],input[type=date],textarea{
+            cursor:text !important;}
+        }
+
+        /* ── Mobile responsive ── */
+        @media(max-width:768px){
+          .nav-links{display:none!important;}
+          .nav-mobile-menu{display:flex!important;}
+          .hero-pad{padding:80px 20px 64px!important;min-height:auto!important;}
+          .pricing-strip > div{border-right:none!important;border-bottom:1px solid rgba(255,255,255,0.08)!important;padding:14px 24px!important;width:100%;}
+          .cat-grid{grid-template-columns:1fr 1fr!important;gap:12px!important;}
+          .hiw-grid{grid-template-columns:1fr!important;}
+          .hiw-grid > div{border-right:none!important;border-bottom:1px solid rgba(255,255,255,0.06)!important;}
+          .stats-grid > div{border-right:none!important;border-bottom:1px solid rgba(8,15,26,0.06)!important;flex:1 1 45%!important;}
+          .browse-filters{flex-direction:column!important;}
+          .profile-grid{grid-template-columns:1fr!important;}
+          .form-2col{grid-template-columns:1fr!important;}
+          .footer-top{flex-direction:column!important;gap:32px!important;}
+          .footer-links{gap:24px!important;flex-wrap:wrap!important;}
+          .modal-inner{padding:24px 18px!important;}
+        }
+        @media(max-width:480px){
+          .cat-grid{grid-template-columns:1fr!important;}
+          .stats-grid > div{flex:1 1 100%!important;}
+        }
+      `}</style>
+
+      {/* ── NAV ── */}
+      <nav style={{background:"rgba(15,33,55,0.97)", height:64, display:"flex", alignItems:"center",
+        justifyContent:"space-between", padding:"0 20px", position:"sticky", top:0, zIndex:300,
+        backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)",
+        borderBottom:"1px solid rgba(255,255,255,0.06)",
+        boxShadow:"0 4px 40px rgba(0,0,0,0.4)"}}>
+
+        {/* Logo — always visible */}
+        <button onClick={function(){setPage("home");setMobileMenuOpen(false);}}
+          style={{background:"none", border:"none",
+            fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700, color:C.white,
+            letterSpacing:"-0.02em", display:"flex", alignItems:"center", gap:8, flexShrink:0}}>
+          <MPLogo size={34} />
+          <span style={{color:C.white}}>my</span><span style={{background:"linear-gradient(90deg,#3ECFB2,#C9A84C)",
+            WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text"}}>placements</span>
+        </button>
+
+        {/* Desktop links — hidden on mobile via CSS */}
+        <div className="nav-links" style={{display:"flex", gap:2, alignItems:"center"}}>
+          {navItems.map(function(item) {
+            return <button key={item[0]} onClick={function(){setPage(item[1]);}} style={{
+              background:page===item[1]?"rgba(62,207,178,0.1)":"none", border:"none",
+              borderBottom:"2px solid "+(page===item[1]?C.mint:"transparent"),
+              color:page===item[1]?C.mint:"rgba(255,255,255,0.6)",
+              padding:"8px 14px", borderRadius:"8px 8px 0 0", fontSize:13, fontWeight:600,
+              fontFamily:"inherit", transition:"all 0.2s"}}>
+              {item[0]}
+            </button>;
+          })}
+          {currentEmployer && (
+            <span style={{color:C.mint, fontSize:12, fontWeight:700,
+              background:"rgba(62,207,178,0.1)", borderRadius:20, padding:"4px 12px",
+              border:"1px solid rgba(62,207,178,0.2)", marginLeft:4}}>
+              ✦ {currentEmployer.contactPerson.split(" ")[0]}
+            </span>
+          )}
+          <button onClick={function(){setCartOpen(true);}} style={{
+            border:"1px solid "+(cart.length?"rgba(62,207,178,0.5)":"rgba(255,255,255,0.12)"),
+            borderRadius:10, fontWeight:700, fontFamily:"inherit",
+            padding:"8px 18px", fontSize:13, position:"relative", marginLeft:6,
+            background:cart.length?"rgba(62,207,178,0.15)":"rgba(255,255,255,0.06)",
+            color:cart.length?C.mint:C.white, display:"inline-flex", alignItems:"center", gap:6}}>
+            🛒 Cart
+            {cart.length>0 && <span style={{position:"absolute", top:-6, right:-6,
+              background:"#E63946", color:C.white, width:18, height:18, borderRadius:"50%",
+              fontSize:10, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center"}}>{cart.length}</span>}
+          </button>
+          <button onClick={function(){setPage("admin");}} style={{background:"none", border:"none",
+            color:"rgba(255,255,255,0.08)", fontSize:10, fontFamily:"inherit",
+            padding:"4px 6px", marginLeft:2}} title="Admin">⚙</button>
+        </div>
+
+        {/* Mobile right side — shown on mobile only via CSS */}
+        <div className="nav-mobile-menu" style={{display:"none", alignItems:"center", gap:8}}>
+          {cart.length>0 && (
+            <button onClick={function(){setCartOpen(true);}} style={{
+              background:"rgba(62,207,178,0.15)", border:"1px solid rgba(62,207,178,0.4)",
+              borderRadius:8, color:C.mint, fontFamily:"inherit", fontSize:13, fontWeight:700,
+              padding:"6px 12px", position:"relative"}}>
+              🛒 {cart.length}
+            </button>
+          )}
+          <button onClick={function(){setMobileMenuOpen(function(o){return !o;});}} style={{
+            background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.15)",
+            borderRadius:8, color:C.white, fontFamily:"inherit",
+            width:38, height:38, fontSize:18, display:"flex", alignItems:"center", justifyContent:"center"}}>
+            {mobileMenuOpen ? "✕" : "☰"}
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile dropdown — slides down below nav */}
+      {mobileMenuOpen && (
+        <div style={{position:"fixed", top:64, left:0, right:0, zIndex:299,
+          background:"rgba(10,20,40,0.98)", backdropFilter:"blur(20px)",
+          borderBottom:"1px solid rgba(255,255,255,0.08)",
+          boxShadow:"0 12px 40px rgba(0,0,0,0.5)", padding:"12px 0 20px"}}>
+          {navItems.map(function(item) {
+            return (
+              <button key={item[0]} onClick={function(){setPage(item[1]);setMobileMenuOpen(false);}}
+                style={{display:"flex", width:"100%", textAlign:"left",
+                  background:page===item[1]?"rgba(62,207,178,0.08)":"none",
+                  border:"none", borderLeft:"3px solid "+(page===item[1]?C.mint:"transparent"),
+                  color:page===item[1]?C.mint:"rgba(255,255,255,0.75)",
+                  padding:"14px 24px", fontSize:15, fontWeight:600, fontFamily:"inherit",
+                  marginBottom:2, alignItems:"center", gap:10}}>
+                {item[0]}
+              </button>
+            );
+          })}
+          <div style={{margin:"12px 20px 0", paddingTop:12, borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+            {currentEmployer
+              ? <div style={{fontSize:13, color:C.mint, fontWeight:600, padding:"8px 4px"}}>
+                  ✦ Logged in as {currentEmployer.contactPerson.split(" ")[0]}
+                  <button onClick={function(){setCurrentEmployer(null);setMobileMenuOpen(false);}}
+                    style={{background:"none", border:"none", color:"rgba(255,255,255,0.4)",
+                      fontSize:11, fontFamily:"inherit", marginLeft:12, textDecoration:"underline"}}>Log out</button>
+                </div>
+              : <button onClick={function(){setPage("employer");setMobileMenuOpen(false);}}
+                  style={{width:"100%", padding:"12px", background:C.mint, color:C.navy,
+                    border:"none", borderRadius:10, fontSize:14, fontWeight:800, fontFamily:"inherit"}}>
+                  Create Employer Account
+                </button>
+            }
+          </div>
+          {cart.length > 0 && (
+            <div style={{margin:"10px 20px 0"}}>
+              <button onClick={function(){setCartOpen(true);setMobileMenuOpen(false);}}
+                style={{width:"100%", padding:"12px", background:"rgba(62,207,178,0.1)",
+                  border:"1px solid rgba(62,207,178,0.3)", borderRadius:10,
+                  color:C.mint, fontSize:14, fontWeight:700, fontFamily:"inherit"}}>
+                🛒 View Cart ({cart.length} profile{cart.length!==1?"s":""}) — R{cart.reduce(function(s,p){return s+p.price;},0)}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {page==="home" && <HomePage setPage={setPage} profileCount={profiles.filter(function(p){return p.status==="active"||p.status==="expiring";}).length} />}
+      {page==="browse" && <BrowsePage profiles={profiles} cart={cart} onAdd={addToCart} onRemove={removeFromCart}
+        onView={setViewProfile} setPage={setPage} currentEmployer={currentEmployer} />}
+      {page==="employee" && <EmployeePage onSubmit={function(p){setProfiles(function(x){return x.concat([p]);});}} />}
+      {page==="employer" && <EmployerPage accounts={employerAccounts}
+        onRegister={function(acc){setEmployerAccounts(function(a){return a.concat([acc]);});setCurrentEmployer(acc);setPage("browse");}}
+        onLogin={function(acc){setCurrentEmployer(acc);setPage("browse");}}
+        currentEmployer={currentEmployer} onLogout={function(){setCurrentEmployer(null);}} setPage={setPage} />}
+
+      {/* Cart modal */}
+      {cartOpen && (
+        <Modal onClose={function(){setCartOpen(false);}}>
+          <h2 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:28, color:C.navy, marginBottom:4}}>Your Cart</h2>
+          <p style={{color:C.gray500, fontSize:13, marginBottom:22}}>{cart.length} profile{cart.length!==1?"s":""}</p>
+          {cart.length===0
+            ? <div style={{textAlign:"center", padding:"48px 0", color:C.gray300}}>Your cart is empty.</div>
+            : <div>
+                {cart.map(function(p) {
+                  var colors = p.photoColor||["#e0e7ff","#3730a3"];
+                  return <div key={p.id} style={{display:"flex", justifyContent:"space-between",
+                    alignItems:"center", padding:"14px 0", borderBottom:"1px solid "+C.gray100}}>
+                    <div style={{display:"flex", alignItems:"center", gap:12}}>
+                      <div style={{width:40, height:40, borderRadius:"50%",
+                        background:p.photoDataUrl?"url("+p.photoDataUrl+") center/cover"
+                          :"linear-gradient(135deg,"+colors[0]+","+colors[1]+")",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        color:C.white, fontSize:14, fontWeight:700, fontFamily:"'Cormorant Garamond',serif"}}>
+                        {!p.photoDataUrl && p.firstName[0]}
+                      </div>
+                      <div>
+                        <div style={{fontWeight:700, color:C.navy, fontSize:14}}>{p.firstName} — {p.role}</div>
+                        <div style={{fontSize:12, color:C.gray500}}>{p.category}</div>
+                      </div>
+                    </div>
+                    <div style={{display:"flex", gap:10, alignItems:"center"}}>
+                      <span style={{fontWeight:700, color:C.navy}}>R{p.price}</span>
+                      <Btn variant="danger" size="sm" onClick={function(){removeFromCart(p.id);}}>✕</Btn>
+                    </div>
+                  </div>;
+                })}
+                <div style={{display:"flex", justifyContent:"space-between", margin:"20px 0 24px",
+                  fontWeight:700, fontSize:18, color:C.navy}}>
+                  <span>Total</span><span>R{cartTotal}</span>
+                </div>
+                <Btn variant="navy" full onClick={function(){setCartOpen(false);setCheckoutOpen(true);}}>Checkout</Btn>
+              </div>
+          }
+        </Modal>
+      )}
+
+      {/* Checkout — Step 1: Order summary + email confirmation */}
+      {checkoutOpen && (
+        <Modal onClose={function(){setCheckoutOpen(false);}}>
+          <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:20}}>
+            <div style={{width:32, height:32, borderRadius:"50%", background:C.mint,
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:800, color:C.navy}}>1</div>
+            <div style={{flex:1, height:2, background:C.gray100}} />
+            <div style={{width:32, height:32, borderRadius:"50%", background:C.gray100,
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:C.gray400}}>2</div>
+            <div style={{flex:1, height:2, background:C.gray100}} />
+            <div style={{width:32, height:32, borderRadius:"50%", background:C.gray100,
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:C.gray400}}>3</div>
+          </div>
+          <div style={{display:"flex", justifyContent:"space-between", marginBottom:20, fontSize:11,
+            color:C.gray400, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.05em"}}>
+            <span style={{color:C.mint}}>Order Summary</span><span>Payment</span><span>Get Files</span>
+          </div>
+          <h2 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:26, color:C.navy, marginBottom:4}}>Order Summary</h2>
+          <p style={{color:C.gray500, fontSize:13, marginBottom:20}}>Confirm your order then proceed to secure payment via PayFast.</p>
+          <div style={{display:"flex", flexDirection:"column", gap:14}}>
+            <div style={{background:C.gray50, borderRadius:10, padding:"14px 16px", fontSize:14, color:C.gray700}}>
+              <strong>{currentEmployer&&currentEmployer.companyName}</strong> · {currentEmployer&&currentEmployer.contactPerson}
+            </div>
+            <FInput label="Send files to this email after payment" required type="email"
+              value={checkoutEmail||(currentEmployer&&currentEmployer.email)||""}
+              onChange={function(e){setCheckoutEmail(e.target.value);}}
+              placeholder="your@email.com" />
+            <div style={{background:C.gray50, borderRadius:12, padding:"16px"}}>
+              <div style={{fontSize:11, fontWeight:700, color:C.gray500, textTransform:"uppercase",
+                letterSpacing:"0.05em", marginBottom:12}}>Profiles in this order</div>
+              {cart.map(function(p){
+                var colors = p.photoColor||["#e0e7ff","#3730a3"];
+                return <div key={p.id} style={{display:"flex", justifyContent:"space-between",
+                  alignItems:"center", padding:"10px 0", borderBottom:"1px solid "+C.gray100}}>
+                  <div style={{display:"flex", alignItems:"center", gap:10}}>
+                    <div style={{width:36, height:36, borderRadius:"50%",
+                      background:"linear-gradient(135deg,"+colors[0]+","+colors[1]+")",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      color:C.white, fontSize:13, fontWeight:700, fontFamily:"'Cormorant Garamond',serif"}}>
+                      {p.firstName[0]}
+                    </div>
+                    <div>
+                      <div style={{fontSize:13, fontWeight:700, color:C.navy}}>{p.firstName} — {p.role}</div>
+                      <div style={{fontSize:11, color:C.gray400, display:"flex", gap:8, marginTop:2}}>
+                        {p.hasCv && <span>📄 CV</span>}
+                        {p.hasCriminalRecord && <span>🔒 Clearance</span>}
+                        <span>📧 Contact</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span style={{fontWeight:700, color:C.navy}}>R{p.price}</span>
+                </div>;
+              })}
+              <div style={{display:"flex", justifyContent:"space-between", marginTop:14,
+                fontWeight:800, fontSize:16, color:C.navy}}>
+                <span>Total</span><span>R{cartTotal}</span>
+              </div>
+            </div>
+            <div style={{background:"#EFF6FF", borderRadius:10, padding:"12px 16px",
+              fontSize:12, color:"#1D4ED8", fontWeight:600}}>
+              ℹ️ Files are only released after PayFast confirms your payment. You will receive an email with the contact details, CV and police clearance for each profile you purchased.
+            </div>
+            <Btn variant="navy" full onClick={handleCheckout}>
+              Continue to Payment — R{cartTotal} →
+            </Btn>
+            <p style={{fontSize:11, color:C.gray300, textAlign:"center", margin:0}}>
+              🔒 Secure payment via PayFast · Accepted: Visa, Mastercard, EFT, SnapScan
+            </p>
+          </div>
+        </Modal>
+      )}
+
+      {/* PayFast redirect screen — Step 2: real PayFast form submission */}
+      {payfastOpen && (function(){
+        var email = checkoutEmail || (currentEmployer && currentEmployer.email) || "";
+        var orderId = "MP-E-" + Date.now();
+        var itemDesc = cart.map(function(p){return p.firstName+" ("+p.role+")";}).join(", ");
+
+        function submitToPayFast() {
+          var form = document.createElement("form");
+          form.method = "POST";
+          form.action = pfUrl();
+          form.style.display = "none";
+
+          var fields = {
+            merchant_id:      PAYFAST.merchantId,
+            merchant_key:     PAYFAST.merchantKey,
+            return_url:       PAYFAST.returnUrl,
+            cancel_url:       PAYFAST.cancelUrl,
+            notify_url:       PAYFAST.notifyUrl,
+            name_first:       currentEmployer ? currentEmployer.contactPerson.split(" ")[0] : "Employer",
+            name_last:        currentEmployer ? (currentEmployer.contactPerson.split(" ")[1]||"") : "",
+            email_address:    email,
+            m_payment_id:     orderId,
+            amount:           cartTotal.toFixed(2),
+            item_name:        "myplacements Profile Unlock x"+cart.length,
+            item_description: itemDesc.slice(0,255),
+          };
+
+          Object.keys(fields).forEach(function(key) {
+            var input = document.createElement("input");
+            input.type = "hidden";
+            input.name = key;
+            input.value = fields[key];
+            form.appendChild(input);
+          });
+
+          document.body.appendChild(form);
+          form.submit();
+        }
+
+        return (
+          <Modal onClose={function(){setPayfastOpen(false);}}>
+            {/* Step indicator */}
+            <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:20}}>
+              <div style={{width:32, height:32, borderRadius:"50%", background:C.gray100,
+                display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:C.gray400}}>1</div>
+              <div style={{flex:1, height:2, background:C.mint}} />
+              <div style={{width:32, height:32, borderRadius:"50%", background:C.mint,
+                display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:800, color:C.navy}}>2</div>
+              <div style={{flex:1, height:2, background:C.gray100}} />
+              <div style={{width:32, height:32, borderRadius:"50%", background:C.gray100,
+                display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:C.gray400}}>3</div>
+            </div>
+            <div style={{display:"flex", justifyContent:"space-between", marginBottom:24, fontSize:11,
+              color:C.gray400, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.05em"}}>
+              <span>Order Summary</span><span style={{color:C.mint}}>Payment</span><span>Get Files</span>
+            </div>
+
+            {/* PayFast branding */}
+            <div style={{background:"linear-gradient(135deg,#00338D,#0052CC)", borderRadius:16,
+              padding:"28px 24px", marginBottom:20, textAlign:"center"}}>
+              <div style={{color:"rgba(255,255,255,0.7)", fontSize:11, fontWeight:700,
+                letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:6}}>Secure Payment via</div>
+              <div style={{color:C.white, fontSize:28, fontWeight:800,
+                fontFamily:"'Cormorant Garamond',serif", letterSpacing:"-0.02em"}}>PayFast</div>
+              <div style={{color:"rgba(255,255,255,0.6)", fontSize:12, marginTop:6}}>
+                South Africa's trusted payment gateway
+              </div>
+              <div style={{background:"rgba(255,255,255,0.12)", borderRadius:10,
+                padding:"16px", marginTop:20, textAlign:"left"}}>
+                {[
+                  {l:"Order reference", v:orderId},
+                  {l:"Merchant", v:"myplacements ("+PAYFAST.merchantId+")"},
+                  {l:"Profiles", v:cart.length+" profile"+(cart.length!==1?"s":"")},
+                  {l:"Email", v:email},
+                ].map(function(r){
+                  return <div key={r.l} style={{display:"flex", justifyContent:"space-between",
+                    color:C.white, fontSize:12, marginBottom:8}}>
+                    <span style={{opacity:0.7}}>{r.l}</span>
+                    <span style={{fontWeight:700, fontSize:11}}>{r.v}</span>
+                  </div>;
+                })}
+                <div style={{display:"flex", justifyContent:"space-between",
+                  color:C.white, fontSize:16, fontWeight:800, marginTop:12,
+                  paddingTop:12, borderTop:"1px solid rgba(255,255,255,0.15)"}}>
+                  <span>Amount due</span><span>R{cartTotal.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment methods */}
+            <div style={{display:"flex", gap:8, justifyContent:"center", marginBottom:16, flexWrap:"wrap"}}>
+              {["Visa","Mastercard","EFT","SnapScan","Mobicred"].map(function(m){
+                return <span key={m} style={{background:C.gray50, border:"1px solid "+C.gray100,
+                  borderRadius:6, padding:"5px 12px", fontSize:11, fontWeight:700, color:C.gray500}}>{m}</span>;
+              })}
+            </div>
+
+            {PAYFAST.sandbox && (
+              <div style={{background:C.amberLight, borderRadius:10, padding:"12px 14px",
+                fontSize:12, color:C.amber, fontWeight:600, marginBottom:16}}>
+                🧪 Sandbox mode — use test card 4000000000000002. No real money charged.
+              </div>
+            )}
+
+            <Btn variant="navy" full onClick={submitToPayFast}>
+              Pay R{cartTotal.toFixed(2)} via PayFast →
+            </Btn>
+            <p style={{fontSize:11, color:C.gray300, textAlign:"center", marginTop:12}}>
+              🔒 256-bit SSL · PCI DSS compliant · Powered by PayFast
+            </p>
+          </Modal>
+        );
+      })()}
+
+      {/* Purchase success — Step 3: Files released */}
+      {purchaseSuccess && (
+        <Modal onClose={function(){setPurchaseSuccess(false);}} wide={true}>
+          <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:20}}>
+            <div style={{width:32, height:32, borderRadius:"50%", background:C.gray100,
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:C.gray400}}>1</div>
+            <div style={{flex:1, height:2, background:C.mint}} />
+            <div style={{width:32, height:32, borderRadius:"50%", background:C.gray100,
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:C.gray400}}>2</div>
+            <div style={{flex:1, height:2, background:C.mint}} />
+            <div style={{width:32, height:32, borderRadius:"50%", background:C.mint,
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:800, color:C.navy}}>✓</div>
+          </div>
+          <div style={{display:"flex", justifyContent:"space-between", marginBottom:24, fontSize:11,
+            color:C.gray400, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.05em"}}>
+            <span>Order Summary</span><span>Payment</span><span style={{color:C.mint}}>Files Released</span>
+          </div>
+
+          <div style={{textAlign:"center", marginBottom:28}}>
+            <div style={{fontSize:56, marginBottom:12}}>🎉</div>
+            <h2 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:30, color:C.navy, marginBottom:8}}>
+              Payment Confirmed!
+            </h2>
+            <p style={{color:C.gray500, fontSize:14, lineHeight:1.7}}>
+              PayFast has confirmed your payment. The contact details, CV and police clearance for each profile have been sent to{" "}
+              <strong style={{color:C.navy}}>{checkoutEmail||(currentEmployer&&currentEmployer.email)}</strong>.
+            </p>
+          </div>
+
+          {/* Released files per profile */}
+          <div style={{display:"flex", flexDirection:"column", gap:16, marginBottom:24}}>
+            {purchasedProfiles.map(function(p){
+              var colors = p.photoColor||["#e0e7ff","#3730a3"];
+              return (
+                <div key={p.id} style={{border:"1.5px solid "+C.green, borderRadius:14, overflow:"hidden"}}>
+                  {/* Profile header */}
+                  <div style={{background:C.greenLight, padding:"14px 18px",
+                    display:"flex", alignItems:"center", gap:12}}>
+                    <div style={{width:44, height:44, borderRadius:"50%", flexShrink:0,
+                      background:"linear-gradient(135deg,"+colors[0]+","+colors[1]+")",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      color:C.white, fontSize:18, fontWeight:700, fontFamily:"'Cormorant Garamond',serif"}}>
+                      {p.firstName[0]}
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:700, color:C.navy, fontSize:15}}>{p.firstName} — {p.role}</div>
+                      <div style={{fontSize:12, color:C.green, fontWeight:600, marginTop:2}}>
+                        ✓ Files unlocked · R{p.price} paid
+                      </div>
+                    </div>
+                  </div>
+                  {/* Unlocked content */}
+                  <div style={{padding:"16px 18px", display:"flex", flexDirection:"column", gap:10}}>
+                    {/* Contact details */}
+                    <div style={{background:C.white, border:"1px solid "+C.gray100,
+                      borderRadius:10, padding:"12px 16px"}}>
+                      <div style={{fontSize:11, fontWeight:800, color:C.navy,
+                        textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:10}}>
+                        📇 Contact Details
+                      </div>
+                      <div style={{display:"flex", flexDirection:"column", gap:6}}>
+                        <div style={{display:"flex", alignItems:"center", gap:10, fontSize:13, color:C.gray700}}>
+                          <span style={{fontSize:16}}>📧</span>
+                          <span style={{fontWeight:600}}>{p.email}</span>
+                        </div>
+                        {p.phone && (
+                          <div style={{display:"flex", alignItems:"center", gap:10, fontSize:13, color:C.gray700}}>
+                            <span style={{fontSize:16}}>📞</span>
+                            <span style={{fontWeight:600}}>{p.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {/* Documents */}
+                    <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10}}>
+                      {p.hasCv && (
+                        <div style={{background:C.white, border:"1px solid "+C.gray100,
+                          borderRadius:10, padding:"12px 14px", display:"flex",
+                          alignItems:"center", gap:10, cursor:"pointer"}}
+                          onClick={function(){alert("In the live site this downloads "+p.firstName+"'s CV PDF from secure storage.");}}>
+                          <span style={{fontSize:24}}>📄</span>
+                          <div>
+                            <div style={{fontSize:12, fontWeight:700, color:C.navy}}>CV / Profile Doc</div>
+                            <div style={{fontSize:11, color:C.blue, fontWeight:600, marginTop:2}}>
+                              Click to download
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {p.hasCriminalRecord && (
+                        <div style={{background:C.white, border:"1px solid "+C.gray100,
+                          borderRadius:10, padding:"12px 14px", display:"flex",
+                          alignItems:"center", gap:10, cursor:"pointer"}}
+                          onClick={function(){alert("In the live site this downloads "+p.firstName+"'s police clearance certificate from secure storage.");}}>
+                          <span style={{fontSize:24}}>🔒</span>
+                          <div>
+                            <div style={{fontSize:12, fontWeight:700, color:C.navy}}>Police Clearance</div>
+                            <div style={{fontSize:11, color:C.blue, fontWeight:600, marginTop:2}}>
+                              Click to download
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Email confirmation notice */}
+          <div style={{background:C.gray50, borderRadius:12, padding:"16px 18px",
+            display:"flex", gap:14, alignItems:"flex-start", marginBottom:20}}>
+            <span style={{fontSize:24, flexShrink:0}}>📬</span>
+            <div>
+              <div style={{fontSize:13, fontWeight:700, color:C.navy, marginBottom:4}}>
+                Email sent to {checkoutEmail||(currentEmployer&&currentEmployer.email)}
+              </div>
+              <div style={{fontSize:12, color:C.gray500, lineHeight:1.7}}>
+                All contact details and documents for your purchased profiles have been sent to your email address. Check your inbox — also check spam if you do not see it within a few minutes.
+              </div>
+            </div>
+          </div>
+
+          <Btn variant="primary" full onClick={function(){setPurchaseSuccess(false);setPage("browse");}}>
+            Continue Browsing
+          </Btn>
+        </Modal>
+      )}
+
+      {/* Profile detail */}
+      {viewProfile && (function(){
+        var p = viewProfile;
+        var colors = p.photoColor||["#e0e7ff","#3730a3"];
+        var days = p.expiryDate ? daysUntil(p.expiryDate) : 0;
+        return (
+          <Modal onClose={function(){setViewProfile(null);}} wide={true}>
+            <div style={{display:"flex", alignItems:"center", gap:18, marginBottom:16}}>
+              <div style={{width:80, height:80, borderRadius:"50%", flexShrink:0,
+                background:p.photoDataUrl?"url("+p.photoDataUrl+") center/cover"
+                  :"linear-gradient(135deg,"+colors[0]+","+colors[1]+")",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                border:"3px solid "+C.gray100, color:C.white, fontSize:32, fontWeight:700,
+                fontFamily:"'Cormorant Garamond',serif"}}>
+                {!p.photoDataUrl&&p.firstName[0]}
+              </div>
+              <div>
+                <h2 style={{fontFamily:"'Cormorant Garamond',serif", fontSize:28, color:C.navy, margin:0}}>{p.firstName}</h2>
+                <div style={{color:C.blue, fontWeight:600, fontSize:15}}>{p.role}</div>
+                <div style={{marginTop:6}}><StatusPill status={p.status} days={days} /></div>
+              </div>
+            </div>
+            <div style={{background:C.gray50, borderRadius:10, padding:"12px 16px", marginBottom:20,
+              display:"flex", gap:20, flexWrap:"wrap", fontSize:13, color:C.gray700}}>
+              <span>📅 Listed: {formatDate(p.uploadDate)}</span>
+              <span>⏳ Expires: {formatDate(p.expiryDate)}</span>
+              {p.nextBillingDate&&<span>💳 Next renewal: {formatDate(p.nextBillingDate)}</span>}
+            </div>
+            <div style={{display:"flex", gap:8, flexWrap:"wrap", marginBottom:20}}>
+              <Badge label={p.category} i={0} />
+              <Badge label={p.yearsExp+" years exp"} i={1} />
+              <Badge label={p.availability} i={2} />
+              {p.hasCriminalRecord&&<Badge label="Verified clear record" i={4} />}
+            </div>
+            <div style={{marginBottom:18}}>
+              <h3 style={{fontSize:11, fontWeight:800, color:C.navy, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:8}}>About</h3>
+              <p style={{fontSize:14, color:C.gray500, lineHeight:1.8, margin:0}}>{p.about}</p>
+            </div>
+            <div style={{marginBottom:18}}>
+              <h3 style={{fontSize:11, fontWeight:800, color:C.navy, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:10}}>Skills & Duties</h3>
+              <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>{p.skills.map(function(s,i){return <Badge key={s} label={s} i={i} />;})}</div>
+            </div>
+            {p.education&&<div style={{marginBottom:18}}>
+              <h3 style={{fontSize:11, fontWeight:800, color:C.navy, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:8}}>Qualifications</h3>
+              <p style={{fontSize:14, color:C.gray500, margin:0}}>{p.education}</p>
+            </div>}
+            <div style={{marginBottom:24}}>
+              <h3 style={{fontSize:11, fontWeight:800, color:C.navy, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:10}}>Documents</h3>
+              <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
+                {p.hasCv&&<div style={{background:C.greenLight, borderRadius:9, padding:"10px 16px", fontSize:13, color:C.green, fontWeight:700}}>📄 Profile doc attached</div>}
+                {p.hasCriminalRecord&&<div style={{background:C.greenLight, borderRadius:9, padding:"10px 16px", fontSize:13, color:C.green, fontWeight:700}}>🔒 Police clearance verified</div>}
+              </div>
+            </div>
+            <div style={{background:C.amberLight, borderRadius:10, padding:"13px 16px",
+              fontSize:13, color:C.amber, marginBottom:24, fontWeight:600}}>
+              🔒 Full contact details unlocked after purchase.
+            </div>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:11, color:C.gray500}}>Unlock contact details</div>
+                <div style={{fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:700, color:C.navy}}>R{p.price}</div>
+              </div>
+              {p.status!=="expired" && (
+                cart.some(function(c){return c.id===p.id;})
+                  ? <Btn variant="danger" onClick={function(){removeFromCart(p.id);setViewProfile(null);}}>Remove from Cart</Btn>
+                  : <Btn variant="primary" onClick={function(){addToCart(p);setViewProfile(null);}}>Add to Cart</Btn>
+              )}
+              {p.status==="expired" && <span style={{fontSize:13, color:C.gray300, fontWeight:600}}>This profile has expired</span>}
+            </div>
+          </Modal>
+        );
+      })()}
+
+      <footer style={{background:"linear-gradient(180deg,#0a1a2e,#0F2137)",
+        borderTop:"1px solid rgba(255,255,255,0.06)", padding:"48px 48px 32px"}}>
+        <div style={{maxWidth:1000, margin:"0 auto"}}>
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start",
+            flexWrap:"wrap", gap:32, marginBottom:40}}>
+            <div>
+              <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:8}}>
+                <MPLogo size={38} />
+                <div style={{fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:700}}>
+                  <span style={{color:C.white}}>my</span>
+                  <span style={{background:"linear-gradient(90deg,#3ECFB2,#C9A84C)",
+                    WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+                    backgroundClip:"text"}}>placements</span>
+                </div>
+              </div>
+              <p style={{fontSize:12, color:"rgba(255,255,255,0.35)", lineHeight:1.7, maxWidth:260}}>
+                South Africa's trusted domestic placement marketplace. Connecting families with verified staff since 2013.
+              </p>
+            </div>
+            <div style={{display:"flex", gap:48, flexWrap:"wrap"}}>
+              {[
+                {h:"For Employers", links:["Browse Profiles","Create Account","How It Works"]},
+                {h:"For Workers", links:["Register Profile","Pricing — R20/mo","Document Requirements"]},
+                {h:"Company", links:["About myplacements","Est. 2013","Built by jackapp"]},
+              ].map(function(col){
+                return <div key={col.h}>
+                  <div style={{fontSize:10, fontWeight:800, letterSpacing:"0.15em",
+                    textTransform:"uppercase", color:"rgba(255,255,255,0.3)", marginBottom:14}}>{col.h}</div>
+                  {col.links.map(function(l){
+                    return <div key={l} style={{fontSize:12, color:"rgba(255,255,255,0.45)",
+                      marginBottom:10, lineHeight:1.5}}>{l}</div>;
+                  })}
+                </div>;
+              })}
+            </div>
+          </div>
+          <div style={{borderTop:"1px solid rgba(255,255,255,0.06)", paddingTop:24,
+            display:"flex", justifyContent:"space-between", alignItems:"center",
+            flexWrap:"wrap", gap:12}}>
+            <div style={{fontSize:11, color:"rgba(255,255,255,0.25)"}}>
+              © 2013–2026 myplacements · All rights reserved
+            </div>
+            <div style={{fontSize:11, color:"rgba(255,255,255,0.2)"}}>
+              Built by <span style={{color:"rgba(62,207,178,0.5)", fontWeight:700}}>jackapp</span> · Powered by PayFast
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+
+window.addEventListener('load', function() {
+  try {
+    var loader = document.getElementById('mp-loading');
+    var container = document.getElementById('root');
+    var root = ReactDOM.createRoot(container);
+    root.render(React.createElement(App));
+    if (loader) loader.style.display = 'none';
+  } catch(e) {
+    console.error('Mount error:', e);
+    var loader = document.getElementById('mp-loading');
+    if (loader) loader.innerHTML = '<h1 style="color:#3ECFB2;font-family:Georgia,serif;">myplacements</h1><p style="color:#E63946;margin-top:16px;padding:0 20px;text-align:center;">Error: ' + e.message + '</p><button onclick="location.reload()" style="margin-top:20px;background:#3ECFB2;color:#0F2137;border:none;padding:12px 24px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">Refresh</button>';
+  }
+});
+</script>
+</body>
+</html>
